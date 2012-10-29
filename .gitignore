@@ -1,0 +1,15 @@
+# Subversion stores:
+.svn
+
+# MKRTK temporary files:
+bone*.txt
+
+# Editor temporary files:
+*.asv
+._*.m
+
+# Ignore FEX download directories:
+#lib/shared/externals/FEX\ Functions/*
+
+# Temporary directories:
+
