@@ -248,7 +248,7 @@ if strcmpi(type,'fields')
     out = out(:,1);
 end
 
-end
+end %defs()
 
 % ========================================================================
 
@@ -279,7 +279,7 @@ end
 % Versioning issues - this is a bit ugly and could be dropped in due course
 handles = check_cloud_upgrade(handles);
 handles = check_roi_upgrade(handles);
-end %load_fields
+end %load_fields()
 
 % ------------------------------------------------------------------------
 function handles = check_cloud_upgrade(handles)
@@ -329,7 +329,7 @@ if isfield(handles,'Models') && isequal(class(handles.Models),'struct')
     end
     handles.Models = M;
 end
-end
+end %check_cloud_upgrade()
 
 % ------------------------------------------------------------------------
 function handles = check_roi_upgrade(handles)

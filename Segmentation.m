@@ -28,31 +28,17 @@ function varargout = Segmentation(varargin)
 % NOTES 
 %
 % BUGS
-%   - Program hangs onto a trace which requires restart
-%       - Only reproducible with the tablet
-%       - Beginning a trace, then pressing the pen button during trace
-%         causes the problem
+%   - 
 %
 % NEW FEATURES TO ADD:
 %
-%   - Importing old ROIs which don't have a "phase" field
-%   - ROI usability:
-%       > Use keyboard [b,g,r,m,y,k,w] to switch the default colour
-%   - Colour exchange dialog
-%       > Swap colours, eg all green -> blue
-%       > Two listboxes of colours: Left, colours in loaded traces; right,
-%           new colour (from standard colours)
+%   - Importing old ROIs which don't have a "phase" field?
 %   
 % CHANGES / IMPROVEMENTS:
 %
-%   - Consider consolidating "modestr" with mfile names used in "Session"
-%       > Session uses the calling m-file
-%       > check_dependencies uses "modestr"
 %   - Improve workflow for exporting traces
 %       > New gui
 %           - Option to export as packaged file or exploded files
-%   - Documentation
-%       - Latex user manual / quick start guide.
 % 
 % ------------------------------------------------------------------------
 
@@ -98,7 +84,7 @@ end
 modestr = '2d';
 
 % Include some important functions:
-configurePaths(modestr)
+configurePaths(modestr);            % Add all necessary paths
 check_dependencies(modestr);        % Check all external dependencies exist
 
 % Choose default command line output for Segmentation

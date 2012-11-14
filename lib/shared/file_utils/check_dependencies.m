@@ -22,23 +22,25 @@ segmentation_funs = {};
 reconstruction_funs = { 'icp.m',         SOFT;   % For registration
                         'ICP_finite.m',  SOFT;   % For registration
                         'drawPlane3d.m', SOFT};  % For work in progress
-shared_funs = { 'findjobj.m',   HARD;
+shared_funs = { 'findjobj.m',  HARD;
                 'getjframe.m', HARD;
                 'sort_nat.m',  HARD };
+
 % Run checks:
 check_fex_deps(shared_funs)
+
 switch lower(program)
+    
     case {'segmentation.m', '2d'}
         check_fex_deps(segmentation_funs)
+        
     case {'reconstruction.m', '3d'}
         check_fex_deps(reconstruction_funs)
 end
         
 
-% --------- Other dependencies: ---------
-%   (none configured yet)
-
 end
+
 
 % ------------------------------------------------------------------------
 function check_fex_deps(deps)
