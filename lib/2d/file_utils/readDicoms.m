@@ -3,6 +3,10 @@ function [X,z,ps,dinfo] = readDicoms(varargin)
 %
 % [X,z,ps,dinfo] = readDicoms( cellPthFile ) loads the dicom files listed
 % in the N-by-1 cell array of full path-file strings
+%
+% This function is a wrapper for one of two methods for reading:
+%   DCM4CHE     - Java 
+%   DICOMREAD   - Matlab's native dicom reading utility
 
 pathstr = [];
 if iscell(varargin{1})
@@ -26,8 +30,8 @@ files = sort_nat(files);
 % don't bother reading in the full header - we only read in those fields
 % that we are interested in.  The result is that the DCM4CHE method with
 % minimal header retrieval is about 4 times faster than using MATLAB's
-% DICOMREAD + DICOMINFO functions, but we've sacrificed much of the header
-% to get that speed.
+% DICOMREAD + DICOMINFO functions, but we've sacrificed reading much of the
+% header to get that speed.
 if dcm4che.libsloaded
     [X,z,ps,dinfo] = dcm4che_dicom_read(pathstr,files);
 else
@@ -62,7 +66,9 @@ infofields = {...
     'PixelSpacing',...
     'ImagePositionPatient',...
     'ImageOrientationPatient',...
-    'NumberOfTemporalPositions'};
+    'NumberOfTemporalPositions',...
+    'AcquisitionNumber',...
+    'InstanceNumber'};
 sargs = infofields;
 [sargs{2,:}] = deal({});
 dinfo = struct(sargs{:});
@@ -135,7 +141,6 @@ for j = 2:n
     
     % Read the slice:
     X(:,:,j) = dicomread([pathstr files{j}]);
-    %N = dinfo.Private_2001_1018;        % Number of images in this set?;
     z(j) = dinfo(j).SliceLocation;
     
 end

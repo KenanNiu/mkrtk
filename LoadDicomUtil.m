@@ -1114,23 +1114,34 @@ D = DICOMDir(dcmdirfile);
 % Unlock
 hlock.unlock;
 
-% Get data
-valid_series = ~cellfun(@(n)isempty(n)|isequal(n,0),{D.series.Private_2001_1018})';
+% Drop empty series: (where SeriesNumber==0)
+valid_series = ~cellfun(@(n)isempty(n)|isequal(n,0),{D.series.SeriesNumber})';
 D.series = D.series(valid_series);
 D.seriesMap = D.seriesMap(valid_series,:);
 
-% Create list of study information:
-nslices = double([D.series.Private_2001_1018]);
-nphases = double([D.series.Private_2001_1081]);
-nimages = nslices.*nphases;
-nimages = cellstr(num2str(nimages(:)));
+% Find number of images in each study:
+for j = size(D.seriesMap,1) : -1 : 1
+    nimages(j) = numel(D.imagesInSeries(D.seriesMap(j,:)));
+end
+
+% Build cell containing all the metadata to display in list:
+% (Robust with if/else in case fields don't exist)
 C = cell(numel(D.series),1);
 C(:,1) = {D.patients.PatientName.FamilyName};
-C(:,end+1) = {D.series.Modality}';
-C(:,end+1) = {D.studies.StudyDescription};
-C(:,end+1) = {D.series.ProtocolName};
-C(:,end+1) = cellsmash('Images: ',nimages);
+if isfield(D.series,'Modality')
+    C(:,end+1) = {D.series.Modality}';
+end
+if isfield(D.studies,'StudyDescription')
+    C(:,end+1) = {D.studies.StudyDescription};
+end
+if isfield(D.series,'ProtocolName')             % PHILIPS
+    C(:,end+1) = {D.series.ProtocolName};
+elseif isfield(D.series,'SeriesDescription')    % SIEMENS (& others?)
+    C(:,end+1) = {D.series.SeriesDescription};
+end
+C(:,end+1) = cellsmash('Images: ', cellstr(num2str(nimages(:))) );
 
+% Convert to a string suitable for the listbox:
 L = cell_to_listbox_string(C);
 
 
@@ -1140,9 +1151,9 @@ L = cell_to_listbox_string(C);
         % C must contain only char elements
         [nr,nc] = size(C);
         sep = repmat(sprintf('  '),nr,1);
-        for j = 1:nc
-            c = char(C(:,j));
-            if j == 1
+        for k = 1:nc
+            c = char(C(:,k));
+            if k == 1
                 S = c;
             else
                 S = [S sep c];
