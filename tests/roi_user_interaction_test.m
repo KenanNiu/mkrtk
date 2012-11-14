@@ -3,6 +3,9 @@ function roi_user_interaction_test
 % Get the gui and make sure it has an image loaded:
 hf = prep_gui_2D;
 
+% These can be a bit unstable on OSX because sometimes Matlab doesn't
+% refresh its graphics properly when maximising/restoring windows...  In
+% that case, restart Matlab and try again.
 test_drawing_to_scale(hf);
 test_joining(hf)
 
@@ -22,7 +25,7 @@ end
 
 
 % =========================================================================
-% TESTS:
+% TEST FUNCTIONS:
 
 
 % ------------------------------------------------------------------------
@@ -100,7 +103,7 @@ drawnow, pause(0.05);
 
 % Turn the tracing tool on:
 set(handles.TraceTool,'State','on')
-MRIMagic('TraceTool_ClickedCallback',handles.TraceTool,[],handles)
+Segmentation('TraceTool_ClickedCallback',handles.TraceTool,[],handles)
 
 % Convert axes coords to screen coords:
 xys = axisloc2screenloc(ha,xy);
@@ -147,9 +150,9 @@ end %jdraw()
 
 % ------------------------------------------------------------------------
 function h = new_gui_handle()
-h = findall(0,'Name','MRIMagic');
+h = findall(0,'Name','Segmentation');
 try close(h), end %#ok<TRYNC>
-h = MRIMagic; 
+h = Segmentation; 
 drawnow
 end %get_gui_handle()
 
@@ -205,19 +208,19 @@ handles = guidata(h);
 
 % Load an image set
 disp('Loading data ...')
-saved_data = load('simple_dicom_set.mat');
-handles.DICOM = saved_data.DICOM;
-disp('Complete!')
+%saved_data = load('simple_dicom_set.mat');
+%handles.DICOM = saved_data.DICOM;
+%disp('Complete!')
 
 hObject = h; % For convenience
 
-%{
+%
 % Specify an MATLAB example image:
 pathname = [toolboxdir('images') filesep 'imdemos' filesep];
 filename = 'knee1.dcm';
 
 % The following code is ripped straight out of
-% MRIMagic>MI_LoadDicom_Callback()
+% Segmentation>MI_LoadDicom_Callback()
 handles.DICOM.pth = pathname;
 if ~iscell(filename), filename = {filename}; end
 try
@@ -246,7 +249,7 @@ handles.userPath = pathname;
 guidata(hObject,handles)
 
 % Now that the guidata is updated, configure the view:
-configureView(handles,2);
+configureView2(handles);
 set(handles.axes1,'CLim',handles.DICOM.CLim)
 
    
@@ -268,25 +271,6 @@ set(handles.axes1,'CLim',handles.DICOM.CLim)
 
 end %prep_gui_2D()
 
-
-% ------------------------------------------------------------------------
-function h = prep_gui_3D
-
-h = new_gui_handle();
-
-handles = guidata(h);
-
-% Now that the guidata is updated, configure the view:
-configureView(handles,3);
-
-end %prep_gui_3D()
-
-
-% ------------------------------------------------------------------------
-function configureView(handles,v)
-% Alias to real function:
-MRIMagic('configureView',handles,v)
-end
 
 
 

@@ -38,6 +38,8 @@ function test_dcm4che
 % figure
 % imagesc(img);
 
+error('not up to date')
+%{
 Pathname = '/Users/josh/Desktop/MGR_008/';
 %Pathname = uigetdir(Pathname,'Select the folder that contains the DICOMDIR file');
 [dcmSeries] = loaddcmdir(Pathname);
@@ -78,4 +80,4 @@ toc
 
 end
 
-%function readDicomsJava( 
+%}

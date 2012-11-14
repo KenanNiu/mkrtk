@@ -284,7 +284,7 @@ switch VR
 case  {'AE','AS','CS','DA','DT','LO','LT','SH','ST','TM','UI','UT'}
     data = deblankAndStripNulls(char(rawData'));
     %processedAttr = deblankAndStripNulls(char(rawAttr.Data));
-    %keyboard
+    
 case {'AT'}
     keyboard
     % For historical reasons don't transpose AT.
@@ -296,12 +296,10 @@ case {'DS', 'IS'}
     
 case {'FL', 'OF'}
     data = dcm_typecast(rawData', 'single', swap);
-    %keyboard
     %processedAttr = dcm_typecast(rawAttr.Data, 'single', swap)';
      
 case 'FD'
     data = dcm_typecast(rawData, 'double', swap);
-    %keyboard
     %processedAttr = dcm_typecast(rawAttr.Data, 'double', swap)';
     
 case 'OB'
@@ -315,7 +313,6 @@ case {'OW', 'US'}
     
 case 'PN'
     data = parsePerson(deblankAndStripNulls(char(rawData')));
-    %keyboard
     %processedAttr = parsePerson(deblankAndStripNulls(char(rawAttr.Data)));
     
 case 'SL'
@@ -329,15 +326,12 @@ case 'SQ'
 case 'SS'
     data = dcm_typecast(rawData','int16',swap);
     %processedAttr = dcm_typecast(rawAttr.Data, 'int16', swap)';
-    %keyboard
     
 case 'UL'
     data = dcm_typecast(rawData, 'uint32', swap);
-    %keyboard
     %processedAttr = dcm_typecast(rawAttr.Data, 'uint32', swap)';
     
 case 'UN'
-    keyboard
     % It's possible that the attribute contains a private sequence
     % with implicit VR; in which case the Data field contains the
     % parsed sequence.
@@ -346,7 +340,6 @@ case 'UN'
     else
         data = get_tag_data(dcmobj,attrId);
     end
-    keyboard
 %     if (isstruct(rawAttr.Data))
 %         processedAttr = parseSequence(rawAttr.Data, dictionary);
 %     else
@@ -354,7 +347,6 @@ case 'UN'
 %     end
 
 otherwise
-    keyboard
     % PS 3.5-1999 Sec. 6.2 indicates that all unknown VRs can be
     % interpretted as UN.  
     processedAttr = rawAttr.Data';

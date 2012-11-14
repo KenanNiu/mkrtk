@@ -238,7 +238,7 @@ cd.plottraces(ax)
 
 
 % -------------- Performing Transformations ----------------- %
-fprinf(2,'This needs to be updated to check vectorised solutions...\n');
+fprintf(2,'This needs to be updated to check vectorised solutions...\n');
 c = cs;
 % Translation:
 ct = c.translate(t); 
