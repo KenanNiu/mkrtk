@@ -11,7 +11,7 @@ function varargout = LoadDicomUtil(varargin)
 %       hfig = LoadDicomUtil({seed_path},'-detach')
 %       
 
-% Last Modified by GUIDE v2.5 15-Nov-2012 11:11:36
+% Last Modified by GUIDE v2.5 15-Nov-2012 13:18:52
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -69,8 +69,6 @@ set(handles.Slider_Frame, 'Visible','off')  % Don't display slider
 
 addlistener(handles.Listbox_Files,'String','PostSet',@list_listener);
 addlistener(handles.Listbox_Files,'Value','PostSet',@list_listener);
-addlistener(handles.Listbox_Info,'String','PostSet',@list_listener);
-addlistener(handles.Listbox_Info,'Value','PostSet',@list_listener);
 
 set_directory(pth)
 
@@ -206,13 +204,21 @@ end
 
 
 % ------------------------------------------------------------------------
+function Checkbox_CacheDICOMDIR_Callback(hObject, eventdata, handles)
+% hObject    handle to Checkbox_CacheDICOMDIR (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+end
+
+
+% ------------------------------------------------------------------------
 function Checkbox_FilterDICOMDIR_Callback(hObject, eventdata, handles)
 % --- Executes on button press in Checkbox_FilterDICOMDIR.
 % hObject    handle to Checkbox_FilterDICOMDIR (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hint: get(hObject,'Value') returns toggle state of Checkbox_FilterDICOMDIR
 filter_checkbox_handler(hObject)
 
 end
@@ -225,7 +231,6 @@ function Checkbox_FilterExtension_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hint: get(hObject,'Value') returns toggle state of Checkbox_FilterExtension
 filter_checkbox_handler(hObject)
 
 end
@@ -531,6 +536,7 @@ function file_list_refresh(pathstring,handles)
 % Usage:
 %   file_list_refresh(pathstring)
 %   file_list_refresh(pathstring,handles)
+
 if exist('handles','var') == 0
     handles = gethandles();
 end
@@ -661,12 +667,8 @@ switch obj
         update_preview(fname, handles.axes1);
         
         
-        
-    case handles.Listbox_Info
-        
-        % All actions that get to here should have already been handled by
-        % the callback which update_infolist() places on Listbox_Info.
-        
+    otherwise
+        error('unhandled')
         
 end
 
@@ -916,7 +918,7 @@ try
     if isdir(pth)
         % do nothing for paths - display as empty
         
-    elseif isdicom(pth)
+    elseif isdicom(pth) && ~isdicomdir(pth)
         I = dicomread(pth);
         
     elseif isimage(pth)
@@ -954,7 +956,8 @@ if isdir(pth)
 	% file present, handle them the same as 
     
 elseif isdicomdir(pth)
-    [S,ud] = list_from_dicomdir(pth);
+    usecache = get(handles.Checkbox_CacheDICOMDIR,'Value');
+    [S,ud] = list_from_dicomdir(pth,usecache);
     cbk = @study_preview;
     uicontrol(hObject)      % switch focus to the study list
     lbt = 1;
@@ -985,6 +988,7 @@ set(hObject,...
 
 % Hide/show slider:
 set(handles.Slider_Frame,'Visible',slideVis)
+
 
 end %update_infolist()
 
@@ -1145,20 +1149,32 @@ end %header_from_dicom()
 
 
 % ------------------------------------------------------------------------
-function [L,D] = list_from_dicomdir(dcmdirfile)
+function [L,D] = list_from_dicomdir(dcmdirfile,usecache)
 
 handles = gethandles();
 
-% Lock figure
-hlock = FigLocker.Lock(handles.figure1);
-hlock.addprogressbar;
-hlock.settext('Parsing DICOMDIR file.  This may take a moment...');
+% Handle caching:
+pth = fileparts(dcmdirfile);
+cachefile = [pth filesep 'dicomdir.mat'];
 
-% Read file:
-D = DICOMDir(dcmdirfile);
+if usecache && exist(cachefile,'file')==2
+    % Load from cache - provides D
+    load(cachefile)
+else
+    % Lock figure
+    hlock = FigLocker.Lock(handles.figure1);
+    hlock.addprogressbar;
+    hlock.settext('Parsing DICOMDIR file.  This may take a moment...');
+    % Read from DICOMDIR file
+    D = DICOMDir(dcmdirfile);
+    % Then save if required:
+    if usecache
+        save(cachefile,'D')
+    end
+    % Unlock
+    hlock.unlock;
+end
 
-% Unlock
-hlock.unlock;
 
 % Drop empty series: (where SeriesNumber==0)
 valid_series = ~cellfun(@(n)isempty(n)|isequal(n,0),{D.series.SeriesNumber})';
@@ -1224,3 +1240,5 @@ pss = D.seriesMap(v, :);
 imgcell = D.imagesInSeries( pss );
 
 end %study_images_from_list() 
+
+

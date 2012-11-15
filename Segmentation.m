@@ -31,11 +31,10 @@ function varargout = Segmentation(varargin)
 %   - 
 %
 % NEW FEATURES TO ADD:
-%
-%   - Importing old ROIs which don't have a "phase" field?
+%   - 
 %   
 % CHANGES / IMPROVEMENTS:
-%
+%   - Importing old ROIs which don't have a "phase" field?
 %   - Improve workflow for exporting traces
 %       > New gui
 %           - Option to export as packaged file or exploded files
