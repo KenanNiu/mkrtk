@@ -11,7 +11,7 @@ function varargout = LoadDicomUtil(varargin)
 %       hfig = LoadDicomUtil({seed_path},'-detach')
 %       
 
-% Last Modified by GUIDE v2.5 24-Jul-2012 10:55:27
+% Last Modified by GUIDE v2.5 15-Nov-2012 11:11:36
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -62,8 +62,9 @@ end
 positionOver(handles.figure1,gcbf);
 
 % Configure axes:
-set(handles.axes1,'Visible','off')  % Don't display axes
-imshow([],'Parent',handles.axes1)   % Show nothing
+set(handles.axes1,'Visible','off')          % Don't display axes
+imshow([],'Parent',handles.axes1)           % Show nothing
+set(handles.Slider_Frame, 'Visible','off')  % Don't display slider
 
 
 addlistener(handles.Listbox_Files,'String','PostSet',@list_listener);
@@ -419,6 +420,38 @@ end
 
 
 % ------------------------------------------------------------------------
+function Slider_Frame_Callback(hObject, eventdata, handles)
+% hObject    handle to Slider_Frame (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'Value') returns position of slider
+%        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
+
+
+imglist = study_images_from_list(handles.Listbox_Info);
+
+val = get(hObject,'Value');
+k = round(val);
+
+update_preview(imglist{k},handles.axes1)
+
+end
+
+% ------------------------------------------------------------------------
+function Slider_Frame_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to Slider_Frame (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: slider controls usually have a light gray background.
+if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor',[.9 .9 .9]);
+end
+
+end
+
+% ------------------------------------------------------------------------
 function figure1_CloseRequestFcn(hObject, eventdata, handles)
 % --- Executes when user attempts to close figure1.
 % hObject    handle to figure1 (see GCBO)
@@ -607,7 +640,7 @@ end
 handles = guidata(obj);
 
 % Now farm out the operation:
-obj = double(obj);  % Convert to it's double counterpart, which is the norm
+obj = double(obj);  % Convert to its double counterpart, which is the norm
 switch obj
     
     case handles.Listbox_Files
@@ -622,12 +655,11 @@ switch obj
         %   - make header list
         %   - update preview
         
-        update_infolist(fname, handles.Listbox_Info)
+        update_infolist(fname, handles.Listbox_Info, handles)
         
         % Try to display it:
         update_preview(fname, handles.axes1);
         
-        % Set the button text:
         
         
     case handles.Listbox_Info
@@ -903,7 +935,7 @@ end %update_preview()
 
 
 % ------------------------------------------------------------------------
-function update_infolist(pth,hObject)
+function update_infolist(pth,hObject,handles)
 % This function updates the info list, handles.Listbox_Info, which is
 % hObject
 MONOSPACED = 'Monospaced';
@@ -914,7 +946,7 @@ ud  = [];
 S = [];
 v = get(hObject,'Value');
 lbt = get(hObject,'ListBoxTop');
-
+slideVis = 'off';
 
 
 if isdir(pth)
@@ -926,6 +958,7 @@ elseif isdicomdir(pth)
     cbk = @study_preview;
     uicontrol(hObject)      % switch focus to the study list
     lbt = 1;
+    slideVis = 'on';
     
 elseif isdicom(pth)
     S = header_from_dicom(pth);
@@ -950,17 +983,30 @@ set(hObject,...
     'ListboxTop', lbt,... 
     'UserData', ud)
 
+% Hide/show slider:
+set(handles.Slider_Frame,'Visible',slideVis)
+
 end %update_infolist()
 
 
 % ------------------------------------------------------------------------
-function study_preview(hObject,~)%hObject,axs)
+function study_preview(hObject,~)
+
 % hObject is now the handle to the listbox
 imglist = study_images_from_list(hObject);
 
-% Just display the middle image for now:
+% Start by selecting the middle image:
+n = numel(imglist);
+k = (n/2);
+s = [1 10]/n; 
+
 handles = guidata(hObject);
-k = round(numel(imglist)/2);
+
+% Set the slider:
+set(handles.Slider_Frame,'Min',1,'Max',n,'Value',k,'SliderStep',s)
+
+% Display the image:
+k = round(k);
 update_preview(imglist{k}, handles.axes1);
 
 end %study_preview()
