@@ -86,6 +86,11 @@ modestr = '2d';
 configurePaths(modestr);            % Add all necessary paths
 check_dependencies(modestr);        % Check all external dependencies exist
 
+% Disble work in progress:
+if ~isdeveloper
+    set(handles.Menu_Dev,'Enable','off')
+end
+
 % Choose default command line output for Segmentation
 handles.output = hObject;
 
