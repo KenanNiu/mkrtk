@@ -47,9 +47,19 @@ ICPSTOP = 0;
 % the dynamic clouds for every phase
 t = tic;
 for j = 1:nr
+        
+    % Increment registration counter (for waitbar & overall progress)
+    rj = rj+1;
     
     pj = plist(j);
     oj = olist(j);
+    
+        % Update waitbar.
+    if j == 1 || (toc(t) > 0.1) %nr < 100 || ( nr < 1000 && mod(j,10)==0 ) || mod(j,100)==0
+        t = tic;
+        progfun( (rj-1)/nr, wstr(rj,pj,oj) );
+        drawnow
+    end
     
     % Check if processing is required on this object/phase:
     if ~q(pj,oj).isnan
@@ -90,17 +100,11 @@ for j = 1:nr
     q(pj,oj) = qj;
     x(pj,oj,:) = xj;
     
-    % Increment registration counter (for waitbar & overall progress)
-    rj = rj+1;
     
-    % Update waitbar.
-    if toc(t) > 0.1 %nr < 100 || ( nr < 1000 && mod(j,10)==0 ) || mod(j,100)==0
-        t = tic;
-        %waitbar((rj-1)/nr,hw,wstr(rj,pj,oj))
-        progfun( (rj)/nr, wstr(rj,pj,oj) );
-    end
+    
     
 end %for
+
 
 if exist('hw','var') && ishandle(hw)
     close(hw)

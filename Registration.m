@@ -1002,7 +1002,7 @@ hl = FigLocker.GetLocker(handles.figure1);
 % If data is empty, user cancelled:
 if isempty(models)
     fprintf(2,'Changes discarded...\n');
-    hl.unlock;
+    try hl.unlock; end %#ok<*TRYNC>
     return  % Do nothing
 end
 

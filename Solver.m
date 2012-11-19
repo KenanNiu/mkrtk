@@ -63,8 +63,6 @@ end
 % Choose default command line output for Solver
 handles.output = hObject;
 
-addpath('Agnes')
-
 % Initialise the tools
 initTools(handles,'solver');
 
@@ -73,6 +71,10 @@ setgetSolver(handles.SolverPopup);
 
 % Contextual menu:
 handles.hscmenu = createContextMenu('cloud');
+
+% Figure KPF & SWF
+set(handles.figure1,'WindowScrollWheelFcn',@swf3d)
+set(handles.figure1,'WindowKeyPressFcn',@kpf3d)
 
 % Handle the inputs:
 if numel(varargin) == 2
@@ -626,13 +628,13 @@ guidata(hObject,handles)
     function regStopFun(~,~)
         global ICPSTOP
         ICPSTOP = 1;
-        disp('stop')
+        %disp('stop')
     end
     %-----------------------------------------------
     function regCancelFun(~,~)
         global ICPSTOP
         ICPSTOP = -1;
-        disp('cancel')
+        %disp('cancel')
     end
     %-----------------------------------------------
     function registrationStatus(x,s)

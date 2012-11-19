@@ -1,51 +1,61 @@
 function swf3d(hf,event)
-%SWF3D Scroll Wheel Function for 3D cloud viewing
+%SWF3D Scroll Wheel Function for figures showing the phase-dependent 3d axes
 %
-% SWF3D calls the slider callback function if the slider is visible
+% SWF3D is hung on either of the two figures, with the target uicontrol as
+% shown:
+%   1) Registration (main 3D program)
+%       - "Slider3D" is a slider uicontrol which is the master control for
+%         changing the displayed phase in this interface
+%
+%   2) Registration Solver (interface for performing the registration)
+%       - "PhasePopup" is a popup uicontrol which is the master control for
+%         changing the displayed phase in this interface
+%
+% SWF3D captures the scroll action and converts in to an incrment/decrement
+% on the appropriate uicontrol.  The uicontrol's callback is then run to
+% action the display refresh.
 
-handles = guidata(hf);
-
-%--------- Check Slider config:
-% nphases = max( cellfun(@numel,handles.LoResClouds) );
-% if isempty(nphases) || nphases == 0
-%     nmin = 1;
-%     nmax = 2;
-% else
-%     nmin = 1;
-%     nmax = nphases;
-% end
-% set(handles.Slider3D,'Min',nmin);
-% set(handles.Slider3D,'Max',nmax);
-% 
-% if isequal('off',get(handles.Slider3D,'Visible'))
-%     return
-% end
-
-
-%--------- Adjust slider:
 
 % Get scroll amount:
-scrollAmount = parseInputs(event);
+scroll = parseInputs(event);
 
-% Get the file name of the GUI (automated, in case it changes):
-[~,fn,~] = fileparts(get(hf,'Filename'));
+% Now find the target uicontrol:
+handles = guidata(hf);
+if isfield(handles,'Slider3D')
+    hObject = handles.Slider3D;
+    valMin = get(hObject,'Min');
+    valMax = get(hObject,'Max');
+    
+elseif isfield(handles,'PhasePopup')
+    hObject = handles.PhasePopup;
+    pstr = cellstr(get(hObject,'String'));
+    valMin = 1;
+    valMax = numel(pstr);
+    
+else
+    return
+end
+
+%[~,fn,~] = fileparts(get(hf,'Filename'));
     
 % Create function handle for main gui m-file:
-caller = str2func(fn);  
+%caller = str2func(fn);  
 
 % Scroll amount & new position:
-val = get(handles.Slider3D,'Value');
-newval = val + scrollAmount;
+val = get(hObject,'Value');
+newval = val + scroll;
 
 
-if newval <= get(handles.Slider3D,'Max') && ...
-        newval >= get(handles.Slider3D,'Min')
+if newval <= valMax && ...
+        newval >= valMin
 
     % Set the new value
-    set(handles.Slider3D,'Value',newval)
+    set(hObject,'Value',newval)
     
-    % Call the slider function in the main program:
-    caller('Slider3D_Callback', handles.Slider3D, [], handles)
+    % Call the uicontrol's callback to action the update:
+    cbk = get(hObject,'Callback');
+    cbk(hObject,[])
+    
 else
     % Tried to scroll past the end
     return
@@ -53,12 +63,12 @@ end
 
 
 % ------------------------------------------------------------------------
-function scrollAmount = parseInputs(event)
+function scroll = parseInputs(event)
 % Parse scroll amount:
 %   event.VerticalScrollCount
 %   event==[]
 if isempty(event)
-    scrollAmount = 0;
+    scroll = 0;
 else
-    scrollAmount = event.VerticalScrollCount;
+    scroll = event.VerticalScrollCount;
 end
