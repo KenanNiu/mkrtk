@@ -158,16 +158,6 @@ handles = initTools(handles,modestr);
 % Initialise our session variables:
 handles = Session.new(handles);
 
-% See also ModelLoader>getModels
-% handles.Models = struct(...
-%     'Tag',      {},...
-%     'HiRes',    {},...  % Will be 1-by-1 or empty struct of static clouds
-%     'LoRes',    {},...  % Will be N-by-1 or empty struct of dynamic clouds
-%     'q',        {},...  
-%     'x',        {});
-% Reserve field for motion calcs:
-%handles.motion = [];
-
 % Reserve space for axis definitions:
 %handles.HelicalAxis  = [];
 %handles.LineOfAction = [];
@@ -521,11 +511,6 @@ mdls = handles.Models;
 if all( cellfun(@isempty,{mdls.q}) )    % Need to have motion data to work on
     disp('Nothing to do...')
     return
-else
-    if ~isfield(mdls,'qraw')            % If fields don't exist yet..
-        [mdls.qraw] = deal(mdls.q);     %  ...create them from (q,x)
-        [mdls.xraw] = deal(mdls.x);     %
-    end
 end
 
 hl = FigLocker.Lock(handles.figure1);
@@ -933,7 +918,7 @@ function modelLoadUpdater(~,event)
 FigLocker.Unlock(handles.figure1);
 
 % Check output & store the return data (if we have it):
-if isa(data,'struct')
+if isa(data,'Bone')
     
     % We have got a valid output
     handles.Models = data;

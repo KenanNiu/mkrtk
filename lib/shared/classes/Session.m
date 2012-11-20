@@ -277,14 +277,24 @@ for j = 1:numel(updfields)
     end
 end
 % Versioning issues - this is a bit ugly and could be dropped in due course
-handles = check_cloud_upgrade(handles);
-handles = check_roi_upgrade(handles);
+handles = check_models_upgrade(handles);    % 20-Nov-2012
+handles = check_cloud_upgrade(handles);     % Sep-2012?
+handles = check_roi_upgrade(handles);       % early-2012?
 end %load_fields()
+
+% ------------------------------------------------------------------------
+function handles = check_models_upgrade(handles)
+% Models used to be a struct, now it is class 'Bone'
+% Upgrade if necessary
+if isfield(handles,'Models') && isa(handles.Models,'struct')
+    handles.Models = Bone(handles.Models);
+end
+end %check_models_upgrade()
 
 % ------------------------------------------------------------------------
 function handles = check_cloud_upgrade(handles)
 % Clouds used to be structs, so here we upgrade old structs to classes:
-if isfield(handles,'Models') && isequal(class(handles.Models),'struct')
+if isfield(handles,'Models') && ~isempty(handles.Models)
     M = handles.Models;
     % "HiRes" & "LoRes" clouds might need to be updated.
     % It would be more ambiguous do this in vectorised form across all

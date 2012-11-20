@@ -1267,15 +1267,10 @@ tree = handles.tree;
 root = tree.getModel().getRoot();
 
 % Pre-allocate space for Models:
-% See also MRIMagic>MRIMagic_OpeningFcn:
+% See also Session.m:
 nm = root.getChildCount();
-Models = struct(...
-    'Tag',      {},...
-    'HiRes',    {},...
-    'LoRes',    {},...
-    'q',        {},...
-    'x',        {});
-[Models(1:3).Tag] = deal('');
+b = Bone();
+Models = b(ones(1,nm)); % Faster than repmat
 
 for mj = 1:nm
     mdlNode = root.getChildAt(mj-1); % 0-based indexing

@@ -15,9 +15,9 @@ end
 % Scroll amount & new position
 switch event.Key
     % Scroll the slider right or left:
-    case {'rightarrow', 'uparrow'}
+    case {'rightarrow', 'downarrow'}
         s = +1;
-    case {'leftarrow', 'downarrow'}
+    case {'leftarrow', 'uparrow'}
         s = -1;
 end
 

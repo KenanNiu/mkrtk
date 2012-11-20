@@ -83,7 +83,7 @@ if numel(varargin) == 2
     [models,p] = varargin{:};
     
     % Check form:
-    assert(isstruct(models))
+    assert(isa(models,'Bone'))
         
     % List of names
     tags = {models.Tag}';       
