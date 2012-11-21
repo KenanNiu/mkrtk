@@ -513,38 +513,40 @@ if all( cellfun(@isempty,{mdls.q}) )    % Need to have motion data to work on
     return
 end
 
-hl = FigLocker.Lock(handles.figure1);
-hl.setprogress(inf)
-hl.settext('Smoothing pose states...');
+StateSmoother(handles.Models)
 
-mdls = smooth_motion(mdls);
-
-% Now if we have any calculations that need re-doing, we should update
-% those: 
-hax = handles.HelicalAxis;
-hax_update = ~cellfun(@isempty,{hax.Axis});
-
-% If we have work to do, give some feedback:
-if any(hax_update)
-    hl.settext('Updating helical axes...')
-    hax(hax_update) = calcHelicalAxes(hax(hax_update),handles.Models);
-end
-
-
-% Update Models from the smoothing:
-handles.Models = mdls;
-
-% Update any dependents:
-handles.HelicalAxis = hax;
-
-% Push to handles:
-guidata(hObject,handles)
-
-% Update the phase-based display:
-phaseDisplay(handles);
-
-% Unlock:
-hl.unlock
+% hl = FigLocker.Lock(handles.figure1);
+% hl.setprogress(inf)
+% hl.settext('Smoothing pose states...');
+% 
+% mdls = smooth_motion(mdls);
+% 
+% % Now if we have any calculations that need re-doing, we should update
+% % those: 
+% hax = handles.HelicalAxis;
+% hax_update = ~cellfun(@isempty,{hax.Axis});
+% 
+% % If we have work to do, give some feedback:
+% if any(hax_update)
+%     hl.settext('Updating helical axes...')
+%     hax(hax_update) = calcHelicalAxes(hax(hax_update),handles.Models);
+% end
+% 
+% 
+% % Update Models from the smoothing:
+% handles.Models = mdls;
+% 
+% % Update any dependents:
+% handles.HelicalAxis = hax;
+% 
+% % Push to handles:
+% guidata(hObject,handles)
+% 
+% % Update the phase-based display:
+% phaseDisplay(handles);
+% 
+% % Unlock:
+% hl.unlock
 
 
 
