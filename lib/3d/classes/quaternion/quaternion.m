@@ -13,30 +13,29 @@ classdef quaternion
 %   q = quaternion(w,x,y,z)     
 %
 %
-% Author:
-%  Mark Tincknell, MIT LL, 29 July 2011, revised 4 May 2012
-
-% Revised/changed by Joshua Martin, Oct-2012
-%
-% Revisions:
-%   Initially built from Mark Tincknell's QUATERNION class, but:
-%       - uses some more intuitive formats
-%       - does not have all the same functionality
-%       - adds in some useful capabilities 
-%       - adds some corrections / convention changes
-%
-% For original file, see the following link.
+% This file is derived from the quaternion class by Mark Tincknell, which
+% can be found here:
 % http://www.mathworks.com/matlabcentral/fileexchange/33341-quaternion-m 
-
-
+%
+% Last cross-checked version: 13 Nov 2012
+%
+% Changes include, but are not limited to
+%   - reduced method set, using only those required for this application
+%   - some data in different formats or order
+%   - some extra methods where required
+%   - some corrections or changes in convention
+%
+% Revised/changed by Joshua Martin, Nov-2012
 
 
 properties (SetAccess = protected)
     e   = zeros(4,1);
 end % properties
 
-% Array constructors - some/all options are used internally
+
 methods
+    %---------------------------------------------------
+    % Array constructors
     function q = quaternion( varargin ) % (constructor)
         switch nargin
 
@@ -488,6 +487,7 @@ methods
         % q = quaternions with norm == 1 (unless q == 0), n = former norms
         siz = size( q );
         nel = prod( siz );
+        ndm = length( siz );
         if nel == 0
             if nargout > 1
                 n   = zeros( siz );
@@ -501,7 +501,10 @@ methods
         n4  = repmat( n, 4, nel );
         ne0 = (n4 ~= 0) & (n4 ~= 1);
         d(ne0)  = d(ne0) ./ n4(ne0);
-        q   = reshape( quaternion( d ), siz );
+        neg     = repmat( reshape( d(1,:) < 0, [1 siz] ), ...
+                          [4, ones(1,ndm)] );
+        d(neg)  = -d(neg);
+        q       = reshape( quaternion( d ), siz );
         if nargout > 1
             n   = shiftdim( n, 1 );
         end
@@ -682,29 +685,29 @@ methods
         qm  = reshape( quaternion( -double( q )), size( q ));
     end % uminus()
     
-    %---------------------------------------------------
-    function qu = unwrap( q , dim )
-        warning('This may give incorrect results')
-        % Need to find out what the actual process for this is and test it.
-        if ~exist('dim','var')
-            dim = 1;
-        end
-        d = diff(q,1,dim);
-        d = double( q );
-        a = d(2:4,[1 1:end-1],:);
-        b = d(2:4,[1:end],:);
-        norm = @(x)sum(x.^2,1);
-        ia = atan2(norm(cross(a,b)),dot(a,b));
-        k = find(ia>pi/2);
-        flip = false(size(ia));
-        for j = 1:numel(k)
-            flip(k(j):end) = ~flip(k(j):end);
-        end
-        sgn = ones(size(flip));
-        sgn(flip) = -1;
-        sgn = shiftdim(sgn,1);
-        qu = q.*sgn;
-    end %unwrap()
+%     %---------------------------------------------------
+%     function qu = unwrap( q , dim )
+%         warning('This may give incorrect results')
+%         % Need to find out what the actual process for this is and test it.
+%         if ~exist('dim','var')
+%             dim = 1;
+%         end
+%         d = diff(q,1,dim);
+%         d = double( q );
+%         a = d(2:4,[1 1:end-1],:);
+%         b = d(2:4,[1:end],:);
+%         norm = @(x)sum(x.^2,1);
+%         ia = atan2(norm(cross(a,b)),dot(a,b)); % included angle
+%         k = find(ia>pi/2);
+%         flip = false(size(ia));
+%         for j = 1:numel(k)
+%             flip(k(j):end) = ~flip(k(j):end);
+%         end
+%         sgn = ones(size(flip));
+%         sgn(flip) = -1;
+%         sgn = shiftdim(sgn,1);
+%         qu = q.*sgn;
+%     end %unwrap()
     
     %---------------------------------------------------
     %---------------------------------------------------
@@ -719,6 +722,8 @@ methods
         % Outputs:
         %   angle    rotation angles in radians
         %   axis     3xN or Nx3 rotation axis unit vectors
+        % Note: angle and axis are constructed so at least 2 out of 3
+        % elements of axis are >= 0.
         siz         = size( q );
         [angle, s]  = deal( zeros( siz ));
         axis        = zeros( [3 siz] );
@@ -935,7 +940,7 @@ methods(Static)
         if exist( 'perm', 'var' ) && isequal( siz, sig )
             q   = ipermute( q, perm );
         end
-        if (ndims( q ) > 2) && (size( q, 1 ) == 1) %#ok<ISMAT>
+        if ~ismatrix( q ) && (size( q, 1 ) == 1)
             q   = shiftdim( q, 1 );
         end
     end % quaternion.EulerAngles()
@@ -1293,7 +1298,7 @@ function out = conformsize( varargin )
 % Output:
 %  out              cell array of input arrays or expanded scalars
 nelem     = cellfun( 'prodofsize', varargin );
-[nel nei] = max( nelem );
+[nel, nei] = max( nelem );
 siz       = size( varargin{nei} );
 for i0 = nargin : -1 : 1
     if nelem(i0) == 1

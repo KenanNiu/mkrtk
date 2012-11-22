@@ -37,7 +37,7 @@ function Loa = knee_tendon_loa(model,studyName)
 X = all_tendon_data(model);
 
 handles = guidata(gcbf);
-p = get(handles.Slider3D,'Value');      % Current phase
+p = get(handles.PhaseSlider,'Value');      % Current phase
 
 % Define an action plane:
 msp = get_simple_action_plane();
@@ -88,7 +88,7 @@ X = all_tendon_data(model);
 handles = guidata(gcbf);
 %figure, ax = axes; hold on
 ax = handles.axes1;
-p = get(handles.Slider3D,'Value');      % Current phase
+p = get(handles.PhaseSlider,'Value');      % Current phase
 
 fprintf(2,'Just look at current phase; remove this later...\n');
 X = X(p);

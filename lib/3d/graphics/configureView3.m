@@ -8,8 +8,8 @@ function configureView3(handles)
 
 hf = handles.figure1;   % Shorthand
 
-configureSlider3d([],handles.Slider3D)  % Update slider limits/steps
-figure1_ResizeFcn(hf,[],handles)        % Adjust slider size/position
+configurePhaseSlider([],handles.PhaseSlider)   % Update slider limits/steps
+figure1_ResizeFcn(hf,[],handles)            % Adjust slider size/position
 
 % Axes properties:
 axis(ha,'equal','tight');   % Make axes tight
