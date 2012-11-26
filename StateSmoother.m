@@ -405,7 +405,7 @@ end
 axset = [handles.axes1, handles.axes2, handles.axes3];
 for axj = axset
     hold(axj,'on')
-    cla(axj)
+    delete(findall(axj,'type','line'));
 end
 
 % Get the currently selected bone:
@@ -435,37 +435,54 @@ r_xyz = b.xraw;
 
 % Plot raw states:
 rprops = {'LineStyle',lsty,'LineWidth',rwid};
-plot(axset(1),r_ang,     'color',rclrs(1,:),rprops{:})
+ht = plot(axset(1),r_ang,     'color',rclrs(1,:),rprops{:});
 
-plot(axset(2),r_axs(1,:),'color',rclrs(1,:),rprops{:})
-plot(axset(2),r_axs(2,:),'color',rclrs(2,:),rprops{:})
-plot(axset(2),r_axs(3,:),'color',rclrs(3,:),rprops{:})
+hi = plot(axset(2),r_axs(1,:),'color',rclrs(1,:),rprops{:});
+hj = plot(axset(2),r_axs(2,:),'color',rclrs(2,:),rprops{:});
+hk = plot(axset(2),r_axs(3,:),'color',rclrs(3,:),rprops{:});
 ylim(axset(2),[-1 1])
 
-plot(axset(3),r_xyz(:,1),'color',rclrs(1,:),rprops{:})
-plot(axset(3),r_xyz(:,2),'color',rclrs(2,:),rprops{:})
-plot(axset(3),r_xyz(:,3),'color',rclrs(3,:),rprops{:})
+
+hx = plot(axset(3),r_xyz(:,1),'color',rclrs(1,:),rprops{:});
+hy = plot(axset(3),r_xyz(:,2),'color',rclrs(2,:),rprops{:});
+hz = plot(axset(3),r_xyz(:,3),'color',rclrs(3,:),rprops{:});
 
 % Plot smoothed states if necessary:
 if b.smoothed
+    set([ht, hi,hj,hk, hx,hy,hz],'HandleVisibility','off')
+    
     % Plot smoothed states over the top
     [s_ang,s_axs] = b.qsmooth.angleaxis;
     s_ang = s_ang*R2D;
     s_xyz = b.xsmooth;
     
     props = {'LineWidth',swid};
-    plot(axset(1),s_ang,'color',sclrs(1,:),props{:})
+    ht = plot(axset(1),s_ang,'color',sclrs(1,:),props{:});
     
-    plot(axset(2),s_axs(1,:),'color',sclrs(1,:),props{:})
-    plot(axset(2),s_axs(2,:),'color',sclrs(2,:),props{:})
-    plot(axset(2),s_axs(3,:),'color',sclrs(3,:),props{:})
+    hi = plot(axset(2),s_axs(1,:),'color',sclrs(1,:),props{:});
+    hj = plot(axset(2),s_axs(2,:),'color',sclrs(2,:),props{:});
+    hk = plot(axset(2),s_axs(3,:),'color',sclrs(3,:),props{:});
     ylim(axset(2),[-1 1])
     
-    plot(axset(3),s_xyz(:,1),'color',sclrs(1,:),props{:})
-    plot(axset(3),s_xyz(:,2),'color',sclrs(2,:),props{:})
-    plot(axset(3),s_xyz(:,3),'color',sclrs(3,:),props{:})
+    hx = plot(axset(3),s_xyz(:,1),'color',sclrs(1,:),props{:});
+    hy = plot(axset(3),s_xyz(:,2),'color',sclrs(2,:),props{:});
+    hz = plot(axset(3),s_xyz(:,3),'color',sclrs(3,:),props{:});
 end
 
+set(ht,'DisplayName','\theta');
+
+set(hi,'DisplayName','i')
+set(hj,'DisplayName','j')
+set(hk,'DisplayName','k')
+
+set(hx,'DisplayName','x')
+set(hy,'DisplayName','y')
+set(hz,'DisplayName','z')
+
+% Configure legends
+legend(axset(1),'show');
+legend(axset(2),'show');
+legend(axset(3),'show');
 
 
 %=========================================================================
