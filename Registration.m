@@ -54,19 +54,9 @@ function varargout = Registration(varargin)
 %               [retval,ncores] = system('sysctl -n hw.ncpu')
 %           - # cores Windows:
 %               ?[retval,ncores] = system('echo %NUMBER_OF_PROCESSORS%')
-%   - State smooting
-%       - smooth quaternions / dual quaternions
-%       - interactive smoothing
-%       - Smoothing for each object separately
-%       - Integrate into Solver? Have a panel which shows the pose
-%           states for the selected object?
-%       - Need to smooth, on separate plots, q(w), q(i,j,k), (x,y,z)
 %   
 % CHANGES / IMPROVEMENTS:
 %
-%   - Change how smoothing is applied & stored
-%       - using (qraw,xraw) and (q,x) seems clumsy
-%       - Solver should only collect the raw (not smoothed) data
 %   - Re-design AnalysisGui
 %       - Stability: on load, ensure reference items exist, if not, drop it
 %   - ModelLoader
@@ -82,7 +72,7 @@ function varargout = Registration(varargin)
 %       - leftovers from combined program (slider visiblity listener)
 %       - The following call probably has no effect now:
 %           PhaseSlider_Callback(handles.PhaseSlider, 'init', handles)
-%   - Helical axis definition GUI causes problems.
+%   - Analysis GUI is incomplete / has bugs.
 %   
 % 
 % ------------------------------------------------------------------------
@@ -404,8 +394,8 @@ np = get(handles.PhaseSlider,'Max');
 for j = 1:np
     t = tic;
     % Update display:
-    set(handles.PhaseSlider,'Value',j);                    % Set phase
-    PhaseSlider_Callback(handles.PhaseSlider, [], handles);% Force draw
+    set(handles.PhaseSlider,'Value',j);     % Set phase
+    runCallback(handles.PhaseSlider);       % Force draw
     % Set axis limits
     set(handles.axes1,'Xlim',xlims)
     set(handles.axes1,'Ylim',ylims)
@@ -462,7 +452,7 @@ np = get(handles.PhaseSlider,'Max');
 for j = 1:np
     % Set the phase:
     set(handles.PhaseSlider,'Value',j)
-    PhaseSlider_Callback(handles.PhaseSlider, [], handles)
+    runCallback(handles.PhaseSlider)
     
     % Set axis limits
     set(handles.axes1,'Xlim',xlims)
@@ -796,7 +786,7 @@ Zlims = NaN(np,2);
 for j = 1:np
     % Set the phase:
     set(handles.PhaseSlider,'Value',j)
-    PhaseSlider_Callback(handles.PhaseSlider, [], handles)
+    runCallback(handles.PhaseSlider)
     
     % First pass: get axis limits
     Xlims(j,:) = get(handles.axes1,'Xlim');
@@ -1013,7 +1003,7 @@ end
 
 handles.HelicalAxis = calcHelicalAxes(handles.HelicalAxis,handles.Models);
 
-PhaseSlider_Callback(handles.PhaseSlider, 'init', handles)
+runCallback(handles.PhaseSlider, 'init')
 guidata(handles.figure1,handles)
 
 hl.unlock;

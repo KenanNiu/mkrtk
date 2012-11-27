@@ -206,7 +206,7 @@ function HaxDefnListbox_KeyPressFcn(hObject, eventdata, handles)
 if isempty(eventdata.Modifier) && ...
         any(strcmpi(eventdata.Key,handles.dklist))
         % Delete currently selected line item:
-        DelHaxButton_Callback(handles.DelHaxButton,[],handles);
+        runCallback(handles.DelHaxButton)
 end
 
 
@@ -339,7 +339,7 @@ function LoaDefnListbox_KeyPressFcn(hObject, eventdata, handles)
 if isempty(eventdata.Modifier) && ...
         any(strcmpi(eventdata.Key,handles.dklist))
     % Delete currently selected line item:
-    DelLoaButton_Callback(handles.DelLoaButton,[],handles);
+    runCallback(handles.DelLoaButton);
 end
 
 
@@ -437,7 +437,7 @@ function MarmDefnListbox_KeyPressFcn(hObject, eventdata, handles)
 if isempty(eventdata.Modifier) && ...
         any(strcmpi(eventdata.Key,handles.dklist))
     % Delete currently selected line item:
-    DelMarmButton_Callback(handles.DelMarmButton,[],handles);
+    runCallback(handles.DelMarmButton);
 end
 
 
