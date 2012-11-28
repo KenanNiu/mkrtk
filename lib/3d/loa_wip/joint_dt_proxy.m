@@ -86,7 +86,7 @@ dtheta = dtheta.*cos(alfa);
 
 % cumsum can't handle NaNs
 dtheta(isnan(dtheta)) = 0;
-theta = cumsum( (dtheta) );        % Abs? not abs?
+theta = cumsum( (abs(dtheta)) );        % Abs? not abs?
 
 %keyboard
 
