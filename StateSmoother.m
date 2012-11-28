@@ -384,7 +384,7 @@ if SMOOTHING
     %hl.setprogress(inf);
     %drawnow
     % Get filter states from GUI:
-    [theta,span,sfun] = guiFilterStates(handles);
+    [theta,slider_val,sfun] = guiFilterStates(handles);
     
     % Smooth models
     handles.Models = handles.Models.smoothpose(sfun);
@@ -392,7 +392,7 @@ if SMOOTHING
     % Store pose_filter states:
     handles.pose_filter.enabled = true;
     handles.pose_filter.theta = theta;
-    handles.pose_filter.span  = span;
+    handles.pose_filter.slider_val  = slider_val;
     handles.pose_filter.fun   = sfun;
     
     %hl.unlock;
@@ -570,30 +570,24 @@ if isfield(fprops,'fun') && fprops.enabled
     i = 1;
     for j = 1:numel(fnames)
         [i1,i2] = regexp(funstr,fnames{j});
-        %nj = i2 - i1
         if (i2-i1) > n
             n = i2-i1;
             i = j;
         end
     end
     set(rObjs(i),'Value',1)
-    %runCallback(rObjs(i))
 else
     set(rObjs(1),'Value',1)
 end
 
-% Smoothing value
+% Smoothing value - Running callback here does the update
 sld = handles.Slider_Width;
-if isfield(fprops,'span') && fprops.enabled
-    sval = fprops.span;
-    if sval < 1
-        sval = sval*get(sld,'Max');
-    end
-    set(handles.Edit_Width,'String',num2str(sval))
-    runCallback(handles.Edit_Width)
+if isfield(fprops,'slider_val') && fprops.enabled
+    set(handles.Edit_Width,'String',num2str(fprops.slider_val))
 else
     set(handles.Edit_Width,'String',round(mean([get(sld,'Min'), get(sld,'Max')])))
 end
+runCallback(handles.Edit_Width)
 
 
 % ------------------------------------------------------------------------
@@ -684,17 +678,27 @@ handles = addToHandles(handles,h);
 
 
 % ------------------------------------------------------------------------
-function [theta,span,sfun] = guiFilterStates(handles)
+function [theta,slider_val,sfun] = guiFilterStates(handles)
 % Get the filter states from the GUI
 
 % Get filter span:
-span = get(handles.Slider_Width,'Value');
+slider_val = get(handles.Slider_Width,'Value');
 
 % Get the independent variable - theta:
-if get(handles.radio_abscissa_phaseId,'Value')
+theta = [];
+if get(handles.radio_abscissa_angle,'Value')    % If 'angle' is selected
+    if isfield(handles,'HelicalAxis') && ...       % If HelicalAxis field exists
+        ~isempty(handles.HelicalAxis)           %   ...and is populated
+    theta = joint_dt_proxy(handles.Models);     % Then get joint angle from that
+    else
+        set(handles.radio_abscissa_angle,  'Value',0)   % Switch to phase
+        set(handles.radio_abscissa_phaseId,'Value',1)   %
+    end
+end
+% But if the above didn't yield anything, either 'phase' is selected, or
+% there are not Helical Axes to work from
+if isempty(theta) %get(handles.radio_abscissa_phaseId,'Value')
     theta = 1:numel(handles.Orig.Models(1).q);
-else
-    theta = joint_dt_proxy(handles.Models);
 end
 
 
@@ -709,6 +713,7 @@ searchstr = 'radio_filter_';
 hr = findall(handles.figure1,'-regexp','Tag',searchstr,'Value',1);
 funstr = regexprep(get(hr,'tag'),searchstr,'');
 
+span = slider_val;
 switch funstr
     case 'moving'
         % This fails if span < 1, so limit it, but don't bother about
