@@ -57,10 +57,9 @@ handles.output = hObject;
 
 % Configure axes:
 title(handles.axes1,{'States Vs Phase',' '})
-ylabel(handles.axes1,'Angle (deg)')
-ylabel(handles.axes2,'Axis Components')
-ylabel(handles.axes3,'Position [mm] ')
-xlabel(handles.axes3,'Phase')
+ylabel(handles.axes1,'Euler Angles (deg)')
+ylabel(handles.axes2,'Position [mm] ')
+xlabel(handles.axes2,'Phase')
 
 % Add the radio boxes:
 handles = newFilterRadios(handles);
@@ -431,7 +430,7 @@ elseif nargin == 2
 end
 
 % Clear axes:
-axset = [handles.axes1, handles.axes2, handles.axes3];
+axset = [handles.axes1, handles.axes2];
 for axj = axset
     hold(axj,'on')
     delete(findall(axj,'type','line'));
@@ -458,51 +457,42 @@ end
 
 % Get raw states:
 R2D = 180/pi;
-[r_ang,r_axs] = b.qraw.angleaxis;
-r_ang = r_ang*R2D;
+r_eul = b.qraw.eulerangles('xyz')*R2D;
 r_xyz = b.xraw;
 
 % Plot raw states:
 rprops = {'LineStyle',lsty,'LineWidth',rwid};
-ht = plot(axset(1),r_ang,     'color',rclrs(1,:),rprops{:});
 
-hi = plot(axset(2),r_axs(1,:),'color',rclrs(1,:),rprops{:});
-hj = plot(axset(2),r_axs(2,:),'color',rclrs(2,:),rprops{:});
-hk = plot(axset(2),r_axs(3,:),'color',rclrs(3,:),rprops{:});
-ylim(axset(2),[-1 1])
+hi = plot(axset(1),r_eul(1,:),'color',rclrs(1,:),rprops{:});
+hj = plot(axset(1),r_eul(2,:),'color',rclrs(2,:),rprops{:});
+hk = plot(axset(1),r_eul(3,:),'color',rclrs(3,:),rprops{:});
 
-
-hx = plot(axset(3),r_xyz(:,1),'color',rclrs(1,:),rprops{:});
-hy = plot(axset(3),r_xyz(:,2),'color',rclrs(2,:),rprops{:});
-hz = plot(axset(3),r_xyz(:,3),'color',rclrs(3,:),rprops{:});
+hx = plot(axset(2),r_xyz(:,1),'color',rclrs(1,:),rprops{:});
+hy = plot(axset(2),r_xyz(:,2),'color',rclrs(2,:),rprops{:});
+hz = plot(axset(2),r_xyz(:,3),'color',rclrs(3,:),rprops{:});
 
 % Plot smoothed states if necessary:
 if b.smoothed
-    set([ht, hi,hj,hk, hx,hy,hz],'HandleVisibility','off')
+    set([hi,hj,hk, hx,hy,hz],'HandleVisibility','off')
     
     % Plot smoothed states over the top
-    [s_ang,s_axs] = b.qsmooth.angleaxis;
-    s_ang = s_ang*R2D;
+    s_eul = b.qsmooth.eulerangles('123')*R2D;
     s_xyz = b.xsmooth;
     
     props = {'LineWidth',swid};
-    ht = plot(axset(1),s_ang,'color',sclrs(1,:),props{:});
     
-    hi = plot(axset(2),s_axs(1,:),'color',sclrs(1,:),props{:});
-    hj = plot(axset(2),s_axs(2,:),'color',sclrs(2,:),props{:});
-    hk = plot(axset(2),s_axs(3,:),'color',sclrs(3,:),props{:});
-    ylim(axset(2),[-1 1])
+    hi = plot(axset(1),s_eul(1,:),'color',sclrs(1,:),props{:});
+    hj = plot(axset(1),s_eul(2,:),'color',sclrs(2,:),props{:});
+    hk = plot(axset(1),s_eul(3,:),'color',sclrs(3,:),props{:});
     
-    hx = plot(axset(3),s_xyz(:,1),'color',sclrs(1,:),props{:});
-    hy = plot(axset(3),s_xyz(:,2),'color',sclrs(2,:),props{:});
-    hz = plot(axset(3),s_xyz(:,3),'color',sclrs(3,:),props{:});
+    hx = plot(axset(2),s_xyz(:,1),'color',sclrs(1,:),props{:});
+    hy = plot(axset(2),s_xyz(:,2),'color',sclrs(2,:),props{:});
+    hz = plot(axset(2),s_xyz(:,3),'color',sclrs(3,:),props{:});
 end
 
-set(ht,'DisplayName','\theta');
-
-set(hi,'DisplayName','i')
-set(hj,'DisplayName','j')
-set(hk,'DisplayName','k')
+set(hi,'DisplayName','roll')
+set(hj,'DisplayName','pitch')
+set(hk,'DisplayName','yaw')
 
 set(hx,'DisplayName','x')
 set(hy,'DisplayName','y')
@@ -511,7 +501,6 @@ set(hz,'DisplayName','z')
 % Configure legends
 legend(axset(1),'show');
 legend(axset(2),'show');
-legend(axset(3),'show');
 
 drawnow
 
