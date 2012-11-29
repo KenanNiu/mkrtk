@@ -114,13 +114,6 @@ set(handles.Slider_Width,'SliderStep',ss)
 set(handles.Text_Min,'String',num2str(mn))
 set(handles.Text_Max,'String',num2str(mx))
 
-
-% Add listeners for refreshing the display:
-addlistener(handles.Slider_Width,'Value','PostSet',  @doCalcs);
-addlistener(handles.checkbox1,'Value','PostSet',@doCalcs);
-addlistener(handles.Listbox_Models,'Value','PostSet', @refreshPlots);
-
-
 positionOver(handles.figure1,caller_handles.figure1)
 
 % Update handles structure:
@@ -154,7 +147,11 @@ function Slider_Width_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
 
+% Update edit box:
 set(handles.Edit_Width,'String',num2str(get(hObject,'Value')))
+
+% Re-calculate
+doCalcs(handles)
 
 
 % --- Executes during object creation, after setting all properties.
@@ -178,14 +175,18 @@ function checkbox1_Callback(hObject, eventdata, handles)
 
 % Hint: get(hObject,'Value') returns toggle state of checkbox1
 
+
+% ---- Enable/disable uicontrols ---- %
 if get(hObject,'Value')
     state = 'on';
 else
     state = 'off';
 end
 
+% Get handles to radio buttons:
 hr = findall(handles.figure1,'Type','uicontrol','style','radiobutton','-regexp','Tag','radio_');
 
+% Now disable/enable all the dependent uicontrols:
 set([handles.Text_FilterWidth
     handles.Slider_Width
     handles.Edit_Width
@@ -195,6 +196,8 @@ set([handles.Text_FilterWidth
     hr],...
     'Enable',state)
 
+% ---- Update / refresh ---- %
+doCalcs(handles)
 
 
 function Edit_Width_Callback(hObject, eventdata, handles)
@@ -261,6 +264,7 @@ function Listbox_Models_Callback(hObject, eventdata, handles)
 % Hints: contents = cellstr(get(hObject,'String')) returns Listbox_Models contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from Listbox_Models
 
+doCalcs(handles)
 
 % --- Executes during object creation, after setting all properties.
 function Listbox_Models_CreateFcn(hObject, eventdata, handles)
@@ -400,7 +404,7 @@ else
     handles.Models = handles.Models.clearsmoothing;
     
     % Store filter props:
-    hanels.pose_filter.enabled = false;
+    handles.pose_filter.enabled = false;
 end
 
 % ----------- Refresh display -----------
@@ -531,8 +535,6 @@ fprops = handles.pose_filter;
 
 % Enabled / disabled:
 set(handles.checkbox1,'Value',fprops.enabled)
-runCallback(handles.checkbox1)
-
 
 % Abscissa
 if isfield(fprops,'theta') && fprops.enabled
@@ -569,14 +571,18 @@ else
     set(rObjs(1),'Value',1)
 end
 
-% Smoothing value - Running callback here does the update
+% Smoothing value
 sld = handles.Slider_Width;
 if isfield(fprops,'slider_val') && fprops.enabled
-    set(handles.Edit_Width,'String',num2str(fprops.slider_val))
+    sval = fprops.slider_val;    
 else
-    set(handles.Edit_Width,'String',round(mean([get(sld,'Min'), get(sld,'Max')])))
+    sval = round(mean([get(sld,'Min'), get(sld,'Max')]));
 end
-runCallback(handles.Edit_Width)
+set(handles.Edit_Width,'String',num2str(sval))
+set(handles.Slider_Width,'Value',sval)
+
+% Then run the callback for the checkbox, which will run the updates:
+runCallback(handles.checkbox1)
 
 
 % ------------------------------------------------------------------------
@@ -762,16 +768,17 @@ caller_handles = guidata(handles.caller);
 
 % Helical Axes
 hax = caller_handles.HelicalAxis;
-hax_update = ~cellfun(@isempty,{hax.Axis});
-% If we have work to do, give some feedback:
-if any(hax_update)
-    %hl.settext('Updating helical axes...')
-    fprintf('Updating helical axes...')
-    hax(hax_update) = calcHelicalAxes(hax(hax_update),handles.Models);
-    disp('done!')
+if ~isempty(hax)
+    hax_update = ~cellfun(@isempty,{hax.Axis});
+    % If we have work to do, give some feedback:
+    if any(hax_update)
+        %hl.settext('Updating helical axes...')
+        fprintf('Updating helical axes...')
+        hax(hax_update) = calcHelicalAxes(hax(hax_update),handles.Models);
+        disp('done!')
+    end
+    caller_handles.HelicalAxis = hax;
 end
-caller_handles.HelicalAxis = hax;
-
 % Moment Arms
 %  - or are these fast enough to do on demand? (ie, in phaseDisplay)
 
