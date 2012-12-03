@@ -1,9 +1,77 @@
 classdef Bone
 % BONE class.  
 %
-% Internally manages the raw/smoothed states of q & x
+% A BONE class object represents a bone model and can store its name
+% (.Tag), its high-resolution representation derived from a static 3D scan
+% (.HiRes), its low-resolution representation derived from a dynamic scan
+% (.LoRes), and the pose states which describe the mapping of the
+% high-resolution model into the positions of the dynamic low-resolution
+% model in terms of its rotation quaterion (.q) and translation vector
+% (.x).  
 %
-% Supersedes "Models" structure.
+% The rotation and translation (q and x) are outputs of the registration
+% algoritm, and the BONE object can store both the raw result, and a
+% smoothed result.  These raw/smoothed states are internally managed so
+% that retrieving them returns the smoothed state if it exists, or the raw
+% state if it does not.  The smoothed and raw states are stored in hidden
+% properties with private set access (see below) so they can be retrieved
+% if necessary, but normal setting/getting of 
+%
+%
+%
+% - Internally manages the raw/smoothed states of q & x
+% - Supersedes "Models" structure.
+%
+% Properties:
+%   Tag         (Ordinary) Bone tag or name
+%   HiRes       (Ordinary) High Resolution (static) cloud objects
+%   LoRes       (Ordinary) Low Resolution (dynamic) cloud objects
+%   smoothed    (Ordinary) True/false - whether q & x return smoothed data
+%   q           (Dependent) Returns qsmooth if it is not empty, otherwise qraw
+%   x           (Dependent) Returns xsmooth if it is not empty, otherwise xraw
+%
+% Hidden Properties:
+%   qraw        Quaternion orientation states as calculated from registration
+%   xraw        Position states ([x y z]) as calculated from registration
+%   qsmooth     Smoothed quaternion states (if smoothing has been performed)
+%   xsmooth     Smoothed position states (if smoothing has been performed)
+%   Version     Class version number (for backward compatibility)
+%   
+%
+% Constructor:
+%   b = Bone()                  % Create an 1-by-1 blank bone object%
+%
+% State smoothing methods:
+%   b = b.smoothpose(fun)       % Smooth pose states (qraw & xraw) with the
+%                               % function FUN, where FUN is a function 
+%                               % handle
+%   b = b.clearsmoothing        % Remove the smoothing so that the   
+%                               % .q and .x methods will return the states 
+%                               % .qraw and .xraw
+%
+%
+% Because "q" and "x" are dependent properties, they have associated getter
+% and setter methods.  They can therefore not be vectorised and should be
+% called on arrays in the following manner:
+%
+%   Q = [b.q]                       % Getter methods
+%   X = [b.x]                       %
+%
+%   [b.q] = deal(q1,q2,q3,...)      % Setter methods
+%   [b.x] = deal(x1,x2,x3,...)      %
+%
+% The getter methods retrieve the smoothed states, qsmooth & xsmooth, if
+% they are not empty, otherwise they return the raw states, qraw & xraw.
+% 
+% The setter methods for q and x reset the raw states, qraw & xraw, to the
+% values specified and reset the smoothed states to empty.  Setting of the
+% smoothed/raw states directly is currently not permitted since the
+% smoothing should be performed by using the state smoothing methods
+% provided.
+%
+% See also CLOUD
+
+% Joshua Martin, 22-Nov-2012
 
 properties
     Tag = ''
@@ -20,13 +88,11 @@ end
 properties (Hidden=true, SetAccess=private)
     qraw
     xraw
-end
-
-properties (Hidden=true, SetAccess=private) 
     qsmooth
     xsmooth
     Version = 1
 end
+
 
 methods
     
@@ -61,7 +127,8 @@ methods
     
     % ------------------------------------------
     %function tf = isregistered
-    %    keyboard
+    %    % May be coming soon...
+    %    keyboard   
     %end
     
     
@@ -70,10 +137,10 @@ methods
         %sfun = @(y)smooth(theta,y,width,'rloess');
         
         n = numel(b);
-        parfor j = 1:n     % ==> upgrate to parfor
+        for j = 1:n     % ==> upgrate to parfor
             if ~isempty(b(j).qraw) && ~all(isnan(b(j).qraw))
-                qj = b(j).qraw.unwrap;   %\_ raw data
-                xj = b(j).xraw;          %/
+                qj = b(j).qraw;   %\_ raw data
+                xj = b(j).xraw;   %/
                 
                 qj = qj.smooth(sfun,1);         %- Smooth q
                 for c = 1:3                     %\ Smooth x

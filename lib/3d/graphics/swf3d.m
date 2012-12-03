@@ -4,7 +4,7 @@ function swf3d(hf,event)
 % SWF3D is hung on either of the two figures, with the target uicontrol as
 % shown:
 %   1) Registration (main 3D program)
-%       - "Slider3D" is a slider uicontrol which is the master control for
+%       - "PhaseSlider" is a slider uicontrol which is the master control for
 %         changing the displayed phase in this interface
 %
 %   2) Registration Solver (interface for performing the registration)
@@ -21,8 +21,8 @@ scroll = parseInputs(event);
 
 % Now find the target uicontrol:
 handles = guidata(hf);
-if isfield(handles,'Slider3D')
-    hObject = handles.Slider3D;
+if isfield(handles,'PhaseSlider')
+    hObject = handles.PhaseSlider;
     valMin = get(hObject,'Min');
     valMax = get(hObject,'Max');
     

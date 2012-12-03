@@ -13,30 +13,29 @@ classdef quaternion
 %   q = quaternion(w,x,y,z)     
 %
 %
-% Author:
-%  Mark Tincknell, MIT LL, 29 July 2011, revised 4 May 2012
-
-% Revised/changed by Joshua Martin, Oct-2012
-%
-% Revisions:
-%   Initially built from Mark Tincknell's QUATERNION class, but:
-%       - uses some more intuitive formats
-%       - does not have all the same functionality
-%       - adds in some useful capabilities 
-%       - adds some corrections / convention changes
-%
-% For original file, see the following link.
+% This file is derived from the quaternion class by Mark Tincknell, which
+% can be found here:
 % http://www.mathworks.com/matlabcentral/fileexchange/33341-quaternion-m 
-
-
+%
+% Last cross-checked version: 13 Nov 2012
+%
+% Changes include, but are not limited to
+%   - reduced method set, using only those required for this application
+%   - some data in different formats or order
+%   - some extra methods where required
+%   - some corrections or changes in convention
+%
+% Revised/changed by Joshua Martin, Nov-2012
 
 
 properties (SetAccess = protected)
     e   = zeros(4,1);
 end % properties
 
-% Array constructors - some/all options are used internally
+
 methods
+    %---------------------------------------------------
+    % Array constructors
     function q = quaternion( varargin ) % (constructor)
         switch nargin
 
@@ -331,6 +330,163 @@ methods
     end % equiv()
     
     %---------------------------------------------------
+    function angles = eulerangles( varargin )
+        % Construct Euler angle triplets equivalent to quaternion rotations
+        % Inputs:
+        %  q        quaternion array
+        %  axes     axes designation strings (e.g. '123' = xyz) or cell strings
+        %           (e.g. {'123'})
+        % Output:
+        %  angles   3 element Euler Angle vectors in radians
+        ics     = cellfun( @iscellstr, varargin );
+        ic      = cellfun( @ischar, varargin );
+        if any( ic )
+            varargin{ic} = cellstr( varargin{ic} );
+            ics = ic;
+        end
+        if ~any( ics )
+            error( 'Must provide axes as a string (e.g. ''123'') or cell string (e.g. {''123''})' );
+        end
+        siv     = cellfun( @size, varargin, 'UniformOutput', false );
+        axes    = varargin{ics};
+        six     = siv{ics};
+        nex     = prod( six );
+        q       = varargin{~ics};
+        siq     = siv{~ics};
+        neq     = prod( siq );
+        if neq == 1
+            siz = six;
+            nel = nex;
+        elseif nex == 1
+            siz = siq;
+            nel = neq;
+        elseif nex == neq
+            siz = siq;
+            nel = neq;
+        else
+            error( 'Must have compatible dimensions for quaternion and axes' );
+        end
+        angles  = zeros( [3 siz] );
+        q       = normalize( q );
+        for jel = 1 : nel
+            iel = min( jel, neq );
+            switch axes{min(jel,nex)}
+                case {'121', 'xyx', 'XYX', 'iji'}
+                    angles(1,iel) = atan2((q(iel).e(2).*q(iel).e(3)- ...
+                        q(iel).e(4).*q(iel).e(1)),(q(iel).e(2).*q(iel).e(4)+ ...
+                        q(iel).e(3).*q(iel).e(1)));
+                    angles(2,iel) = acos(q(iel).e(1).^2+q(iel).e(2).^2- ...
+                        q(iel).e(3).^2-q(iel).e(4).^2);
+                    angles(3,iel) = atan2((q(iel).e(2).*q(iel).e(3)+ ...
+                        q(iel).e(4).*q(iel).e(1)),(q(iel).e(3).*q(iel).e(1)- ...
+                        q(iel).e(2).*q(iel).e(4)));
+                case {'123', 'xyz', 'XYZ', 'ijk'}
+                    angles(1,iel) = atan2(2.*(q(iel).e(2).*q(iel).e(1)+ ...
+                        q(iel).e(4).*q(iel).e(3)),(q(iel).e(1).^2- ...
+                        q(iel).e(2).^2-q(iel).e(3).^2+q(iel).e(4).^2));
+                    angles(2,iel) = asin(2.*(q(iel).e(3).*q(iel).e(1)- ...
+                        q(iel).e(2).*q(iel).e(4)));
+                    angles(3,iel) = atan2(2.*(q(iel).e(2).*q(iel).e(3)+ ...
+                        q(iel).e(4).*q(iel).e(1)),(q(iel).e(1).^2+ ...
+                        q(iel).e(2).^2-q(iel).e(3).^2-q(iel).e(4).^2));
+                case {'131', 'xzx', 'XZX', 'iki'}
+                    angles(1,iel) = atan2((q(iel).e(2).*q(iel).e(4)+ ...
+                        q(iel).e(3).*q(iel).e(1)),(q(iel).e(4).*q(iel).e(1)- ...
+                        q(iel).e(2).*q(iel).e(3)));
+                    angles(2,iel) = acos(q(iel).e(1).^2+q(iel).e(2).^2- ...
+                        q(iel).e(3).^2-q(iel).e(4).^2);
+                    angles(3,iel) = atan2((q(iel).e(2).*q(iel).e(4)- ...
+                        q(iel).e(3).*q(iel).e(1)),(q(iel).e(2).*q(iel).e(3)+ ...
+                        q(iel).e(4).*q(iel).e(1)));
+                case {'132', 'xzy', 'XZY', 'ikj'}
+                    angles(1,iel) = atan2(2.*(q(iel).e(2).*q(iel).e(1)- ...
+                        q(iel).e(4).*q(iel).e(3)),(q(iel).e(1).^2- ...
+                        q(iel).e(2).^2+q(iel).e(3).^2-q(iel).e(4).^2));
+                    angles(2,iel) = asin(2.*(q(iel).e(2).*q(iel).e(3)+ ...
+                        q(iel).e(4).*q(iel).e(1)));
+                    angles(3,iel) = atan2(2.*(q(iel).e(3).*q(iel).e(1)- ...
+                        q(iel).e(2).*q(iel).e(4)),(q(iel).e(1).^2+ ...
+                        q(iel).e(2).^2-q(iel).e(3).^2-q(iel).e(4).^2));
+                case {'212', 'yxy', 'YXY', 'jij'}
+                    angles(1,iel) = atan2((q(iel).e(2).*q(iel).e(3)+ ...
+                        q(iel).e(4).*q(iel).e(1)),(q(iel).e(2).*q(iel).e(1)- ...
+                        q(iel).e(3).*q(iel).e(4)));
+                    angles(2,iel) = acos(q(iel).e(1).^2-q(iel).e(2).^2+ ...
+                        q(iel).e(3).^2-q(iel).e(4).^2);
+                    angles(3,iel) = atan2((q(iel).e(2).*q(iel).e(3)- ...
+                        q(iel).e(4).*q(iel).e(1)),(q(iel).e(2).*q(iel).e(1)+ ...
+                        q(iel).e(3).*q(iel).e(4)));
+                case {'213', 'yxz', 'YXZ', 'jik'}
+                    angles(1,iel) = atan2(2.*(q(iel).e(3).*q(iel).e(1)- ...
+                        q(iel).e(4).*q(iel).e(2)),(q(iel).e(1).^2- ...
+                        q(iel).e(2).^2-q(iel).e(3).^2+q(iel).e(4).^2));
+                    angles(2,iel) = asin(2.*(q(iel).e(2).*q(iel).e(1)+ ...
+                        q(iel).e(3).*q(iel).e(4)));
+                    angles(3,iel) = atan2(2.*(q(iel).e(4).*q(iel).e(1)- ...
+                        q(iel).e(2).*q(iel).e(3)),(q(iel).e(1).^2- ...
+                        q(iel).e(2).^2+q(iel).e(3).^2-q(iel).e(4).^2));
+                case {'231', 'yzx', 'YZX', 'jki'}
+                    angles(1,iel) = atan2(2.*(q(iel).e(2).*q(iel).e(4)+ ...
+                        q(iel).e(3).*q(iel).e(1)),(q(iel).e(1).^2+ ...
+                        q(iel).e(2).^2-q(iel).e(3).^2-q(iel).e(4).^2));
+                    angles(2,iel) = asin(2.*(q(iel).e(4).*q(iel).e(1)- ...
+                        q(iel).e(2).*q(iel).e(3)));
+                    angles(3,iel) = atan2(2.*(q(iel).e(2).*q(iel).e(1)+ ...
+                        q(iel).e(3).*q(iel).e(4)),(q(iel).e(1).^2- ...
+                        q(iel).e(2).^2+q(iel).e(3).^2-q(iel).e(4).^2));
+                case {'232', 'yzy', 'YZY', 'jkj'}
+                    angles(1,iel) = atan2((q(iel).e(3).*q(iel).e(4)- ...
+                        q(iel).e(2).*q(iel).e(1)),(q(iel).e(2).*q(iel).e(3)+ ...
+                        q(iel).e(4).*q(iel).e(1)));
+                    angles(2,iel) = acos(q(iel).e(1).^2-q(iel).e(2).^2+ ...
+                        q(iel).e(3).^2-q(iel).e(4).^2);
+                    angles(3,iel) = atan2((q(iel).e(2).*q(iel).e(1)+ ...
+                        q(iel).e(3).*q(iel).e(4)),(q(iel).e(4).*q(iel).e(1)- ...
+                        q(iel).e(2).*q(iel).e(3)));
+                case {'312', 'zxy', 'ZXY', 'kij'}
+                    angles(1,iel) = atan2(2.*(q(iel).e(2).*q(iel).e(3)+ ...
+                        q(iel).e(4).*q(iel).e(1)),(q(iel).e(1).^2- ...
+                        q(iel).e(2).^2+q(iel).e(3).^2-q(iel).e(4).^2));
+                    angles(2,iel) = asin(2.*(q(iel).e(2).*q(iel).e(1)- ...
+                        q(iel).e(3).*q(iel).e(4)));
+                    angles(3,iel) = atan2(2.*(q(iel).e(2).*q(iel).e(4)+ ...
+                        q(iel).e(3).*q(iel).e(1)),(q(iel).e(1).^2- ...
+                        q(iel).e(2).^2-q(iel).e(3).^2+q(iel).e(4).^2));
+                case {'313', 'zxz', 'ZXZ', 'kik'}
+                    angles(1,iel) = atan2((q(iel).e(2).*q(iel).e(4)- ...
+                        q(iel).e(3).*q(iel).e(1)),(q(iel).e(2).*q(iel).e(1)+ ...
+                        q(iel).e(3).*q(iel).e(4)));
+                    angles(2,iel) = acos(q(iel).e(1).^2-q(iel).e(2).^2- ...
+                        q(iel).e(3).^2+q(iel).e(4).^2);
+                    angles(3,iel) = atan2((q(iel).e(2).*q(iel).e(4)+ ...
+                        q(iel).e(3).*q(iel).e(1)),(q(iel).e(2).*q(iel).e(1)- ...
+                        q(iel).e(3).*q(iel).e(4)));
+                case {'321', 'zyx', 'ZYX', 'kji'}
+                    angles(1,iel) = atan2(2.*(q(iel).e(4).*q(iel).e(1)- ...
+                        q(iel).e(2).*q(iel).e(3)),(q(iel).e(1).^2+ ...
+                        q(iel).e(2).^2-q(iel).e(3).^2-q(iel).e(4).^2));
+                    angles(2,iel) = asin(2.*(q(iel).e(2).*q(iel).e(4)+ ...
+                        q(iel).e(3).*q(iel).e(1)));
+                    angles(3,iel) = atan2(2.*(q(iel).e(2).*q(iel).e(1)- ...
+                        q(iel).e(3).*q(iel).e(4)),(q(iel).e(1).^2- ...
+                        q(iel).e(2).^2-q(iel).e(3).^2+q(iel).e(4).^2));
+                case {'323', 'zyz', 'ZYZ', 'kjk'}
+                    angles(1,iel) = atan2((q(iel).e(2).*q(iel).e(1)+ ...
+                        q(iel).e(3).*q(iel).e(4)),(q(iel).e(3).*q(iel).e(1)- ...
+                        q(iel).e(2).*q(iel).e(4)));
+                    angles(2,iel) = acos(q(iel).e(1).^2-q(iel).e(2).^2- ...
+                        q(iel).e(3).^2+q(iel).e(4).^2);
+                    angles(3,iel) = atan2((q(iel).e(3).*q(iel).e(4)- ...
+                        q(iel).e(2).*q(iel).e(1)),(q(iel).e(2).*q(iel).e(4)+ ...
+                        q(iel).e(3).*q(iel).e(1)));
+                otherwise
+                    error( 'Invalid output Euler angle axes' );
+            end % switch axes
+        end % for iel
+        angles  = chop( angles );
+    end % eulerangles
+    
+    %---------------------------------------------------
     function qi = inverse( q )
         % Quaternion inverse:
         %   qi = conj(q)/norm(q)^2, q*qi = qi*q = 1 for q ~= 0
@@ -488,6 +644,7 @@ methods
         % q = quaternions with norm == 1 (unless q == 0), n = former norms
         siz = size( q );
         nel = prod( siz );
+        ndm = length( siz );
         if nel == 0
             if nargout > 1
                 n   = zeros( siz );
@@ -501,7 +658,10 @@ methods
         n4  = repmat( n, 4, nel );
         ne0 = (n4 ~= 0) & (n4 ~= 1);
         d(ne0)  = d(ne0) ./ n4(ne0);
-        q   = reshape( quaternion( d ), siz );
+        neg     = repmat( reshape( d(1,:) < 0, [1 siz] ), ...
+                          [4, ones(1,ndm)] );
+        d(neg)  = -d(neg);
+        q       = reshape( quaternion( d ), siz );
         if nargout > 1
             n   = shiftdim( n, 1 );
         end
@@ -682,29 +842,29 @@ methods
         qm  = reshape( quaternion( -double( q )), size( q ));
     end % uminus()
     
-    %---------------------------------------------------
-    function qu = unwrap( q , dim )
-        warning('This may give incorrect results')
-        % Need to find out what the actual process for this is and test it.
-        if ~exist('dim','var')
-            dim = 1;
-        end
-        d = diff(q,1,dim);
-        d = double( q );
-        a = d(2:4,[1 1:end-1],:);
-        b = d(2:4,[1:end],:);
-        norm = @(x)sum(x.^2,1);
-        ia = atan2(norm(cross(a,b)),dot(a,b));
-        k = find(ia>pi/2);
-        flip = false(size(ia));
-        for j = 1:numel(k)
-            flip(k(j):end) = ~flip(k(j):end);
-        end
-        sgn = ones(size(flip));
-        sgn(flip) = -1;
-        sgn = shiftdim(sgn,1);
-        qu = q.*sgn;
-    end %unwrap()
+%     %---------------------------------------------------
+%     function qu = unwrap( q , dim )
+%         warning('This may give incorrect results')
+%         % Need to find out what the actual process for this is and test it.
+%         if ~exist('dim','var')
+%             dim = 1;
+%         end
+%         d = diff(q,1,dim);
+%         d = double( q );
+%         a = d(2:4,[1 1:end-1],:);
+%         b = d(2:4,[1:end],:);
+%         norm = @(x)sum(x.^2,1);
+%         ia = atan2(norm(cross(a,b)),dot(a,b)); % included angle
+%         k = find(ia>pi/2);
+%         flip = false(size(ia));
+%         for j = 1:numel(k)
+%             flip(k(j):end) = ~flip(k(j):end);
+%         end
+%         sgn = ones(size(flip));
+%         sgn(flip) = -1;
+%         sgn = shiftdim(sgn,1);
+%         qu = q.*sgn;
+%     end %unwrap()
     
     %---------------------------------------------------
     %---------------------------------------------------
@@ -719,6 +879,8 @@ methods
         % Outputs:
         %   angle    rotation angles in radians
         %   axis     3xN or Nx3 rotation axis unit vectors
+        % Note: angle and axis are constructed so at least 2 out of 3
+        % elements of axis are >= 0.
         siz         = size( q );
         [angle, s]  = deal( zeros( siz ));
         axis        = zeros( [3 siz] );
@@ -935,7 +1097,7 @@ methods(Static)
         if exist( 'perm', 'var' ) && isequal( siz, sig )
             q   = ipermute( q, perm );
         end
-        if (ndims( q ) > 2) && (size( q, 1 ) == 1) %#ok<ISMAT>
+        if ~ismatrix( q ) && (size( q, 1 ) == 1)
             q   = shiftdim( q, 1 );
         end
     end % quaternion.EulerAngles()
@@ -1293,7 +1455,7 @@ function out = conformsize( varargin )
 % Output:
 %  out              cell array of input arrays or expanded scalars
 nelem     = cellfun( 'prodofsize', varargin );
-[nel nei] = max( nelem );
+[nel, nei] = max( nelem );
 siz       = size( varargin{nei} );
 for i0 = nargin : -1 : 1
     if nelem(i0) == 1

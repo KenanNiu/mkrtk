@@ -22,7 +22,7 @@ function varargout = Registration(varargin)
 
 % Edit the above text to modify the response to help Registration
 
-% Last Modified by GUIDE v2.5 17-Sep-2012 11:07:00
+% Last Modified by GUIDE v2.5 22-Nov-2012 15:22:24
 
 % ------------------------------------------------------------------------
 % NOTES 
@@ -54,19 +54,9 @@ function varargout = Registration(varargin)
 %               [retval,ncores] = system('sysctl -n hw.ncpu')
 %           - # cores Windows:
 %               ?[retval,ncores] = system('echo %NUMBER_OF_PROCESSORS%')
-%   - State smooting
-%       - smooth quaternions / dual quaternions
-%       - interactive smoothing
-%       - Smoothing for each object separately
-%       - Integrate into Solver? Have a panel which shows the pose
-%           states for the selected object?
-%       - Need to smooth, on separate plots, q(w), q(i,j,k), (x,y,z)
 %   
 % CHANGES / IMPROVEMENTS:
 %
-%   - Change how smoothing is applied & stored
-%       - using (qraw,xraw) and (q,x) seems clumsy
-%       - Solver should only collect the raw (not smoothed) data
 %   - Re-design AnalysisGui
 %       - Stability: on load, ensure reference items exist, if not, drop it
 %   - ModelLoader
@@ -81,8 +71,8 @@ function varargout = Registration(varargin)
 %   - Updating the slider min/max isn't clear
 %       - leftovers from combined program (slider visiblity listener)
 %       - The following call probably has no effect now:
-%           Slider3D_Callback(handles.Slider3D, 'init', handles)
-%   - Helical axis definition GUI causes problems.
+%           PhaseSlider_Callback(handles.PhaseSlider, 'init', handles)
+%   - Analysis GUI is incomplete / has bugs.
 %   
 % 
 % ------------------------------------------------------------------------
@@ -191,9 +181,9 @@ function figure1_ResizeFcn(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Slider width/position:
-spsn = get(handles.Slider3D,'Position');
+spsn = get(handles.PhaseSlider,'Position');
 fpsn = get(handles.figure1,'Position');
-set(handles.Slider3D,'Position',[0 0 fpsn(3)-15 spsn(4)])
+set(handles.PhaseSlider,'Position',[0 0 fpsn(3)-15 spsn(4)])
 
 
 %=========================================================================
@@ -343,8 +333,8 @@ launch_Analysis_gui(handles)
 
 
 % ------------------------------------------------------------------------
-function Slider3D_Callback(hObject, eventdata, handles)
-% hObject    handle to Slider3D (see GCBO)
+function PhaseSlider_Callback(hObject, eventdata, handles)
+% hObject    handle to PhaseSlider (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
@@ -374,8 +364,8 @@ phaseDisplay(handles);
 
 
 % ------------------------------------------------------------------------
-function Slider3D_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to Slider3D (see GCBO)
+function PhaseSlider_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to PhaseSlider (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
@@ -385,7 +375,7 @@ if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColo
 end
 
 % Configure / check the slider every time it becomes visible:
-addlistener(hObject,'Visible','PreSet',@configureSlider3d);
+addlistener(hObject,'Visible','PreSet',@configurePhaseSlider);
 
 
 % ------------------------------------------------------------------------
@@ -396,7 +386,7 @@ function MI_Replay_Callback(hObject, eventdata, handles)
 
 dt = 0.2;  % Target frame time (1/fps)
 
-np = get(handles.Slider3D,'Max');
+np = get(handles.PhaseSlider,'Max');
 
 % Get axis limits for the whole cycle:
 [xlims,ylims,zlims] = get_bounding_axis_limits(handles);
@@ -404,8 +394,8 @@ np = get(handles.Slider3D,'Max');
 for j = 1:np
     t = tic;
     % Update display:
-    set(handles.Slider3D,'Value',j);                    % Set phase
-    Slider3D_Callback(handles.Slider3D, [], handles);   % Force draw
+    set(handles.PhaseSlider,'Value',j);     % Set phase
+    runCallback(handles.PhaseSlider);       % Force draw
     % Set axis limits
     set(handles.axes1,'Xlim',xlims)
     set(handles.axes1,'Ylim',ylims)
@@ -458,11 +448,11 @@ vidObj.Quality = 100;
 open(vidObj);
 
 % Record frames:
-np = get(handles.Slider3D,'Max');
+np = get(handles.PhaseSlider,'Max');
 for j = 1:np
     % Set the phase:
-    set(handles.Slider3D,'Value',j)
-    Slider3D_Callback(handles.Slider3D, [], handles)
+    set(handles.PhaseSlider,'Value',j)
+    runCallback(handles.PhaseSlider)
     
     % Set axis limits
     set(handles.axes1,'Xlim',xlims)
@@ -513,40 +503,7 @@ if all( cellfun(@isempty,{mdls.q}) )    % Need to have motion data to work on
     return
 end
 
-hl = FigLocker.Lock(handles.figure1);
-hl.setprogress(inf)
-hl.settext('Smoothing pose states...');
-
-mdls = smooth_motion(mdls);
-
-% Now if we have any calculations that need re-doing, we should update
-% those: 
-hax = handles.HelicalAxis;
-hax_update = ~cellfun(@isempty,{hax.Axis});
-
-% If we have work to do, give some feedback:
-if any(hax_update)
-    hl.settext('Updating helical axes...')
-    hax(hax_update) = calcHelicalAxes(hax(hax_update),handles.Models);
-end
-
-
-% Update Models from the smoothing:
-handles.Models = mdls;
-
-% Update any dependents:
-handles.HelicalAxis = hax;
-
-% Push to handles:
-guidata(hObject,handles)
-
-% Update the phase-based display:
-phaseDisplay(handles);
-
-% Unlock:
-hl.unlock
-
-
+StateSmoother;
 
 
 % ------------------------------------------------------------------------
@@ -626,7 +583,7 @@ end
 % ------------------------------------------------------------------------
 function CloudVisibility_Callback(hObject, eventdata, handles)
 % Funtion to show / hide the static / dynamic clouds in positions specified
-% by Slider3D, after running ICP calculations to determine those positions.
+% by PhaseSlider, after running ICP calculations to determine those positions.
 
 % Refresh display with current toggle states:
 phaseDisplay(handles);
@@ -711,7 +668,7 @@ grid(ha,'on')
 view(ha,3)
 axis(ha,'equal','tight')
 
-configureSlider3d([],handles.Slider3D)  % Update slider limits/steps
+configurePhaseSlider([],handles.PhaseSlider)  % Update slider limits/steps
 figure1_ResizeFcn(hf,[],handles)        % Adjust slider size/position
 
 % Make sure something is being displayed:
@@ -730,15 +687,15 @@ phaseDisplay(handles)
 
 
 % ------------------------------------------------------------------------
-function configureSlider3d(~,arg2)
-% Configure handles.Slider3D
+function configurePhaseSlider(~,arg2)
+% Configure handles.PhaseSlider
 % ARG2 could be an event (when called by a listener) or a handle (when
 % called directly in code)
 
 % Get handles:
 if isa(arg2,'handle.PropertySetEventData')
     handles = guidata(arg2.AffectedObject);
-    hObject = handles.Slider3D;
+    hObject = handles.PhaseSlider;
 else
     hObject = arg2;
     handles = guidata(hObject);
@@ -784,7 +741,7 @@ function [xlims,ylims,zlims] = get_bounding_axis_limits(handles)
 % The easiest way of doing this is to play through the sequence, collect
 % axis limits at each phase, then run minx() & max() for each coordinate.
 
-np = get(handles.Slider3D,'Max');
+np = get(handles.PhaseSlider,'Max');
 
 Xlims = NaN(np,2);
 Ylims = NaN(np,2);
@@ -793,8 +750,8 @@ Zlims = NaN(np,2);
 % First pass: get suitable axis limits
 for j = 1:np
     % Set the phase:
-    set(handles.Slider3D,'Value',j)
-    Slider3D_Callback(handles.Slider3D, [], handles)
+    set(handles.PhaseSlider,'Value',j)
+    runCallback(handles.PhaseSlider)
     
     % First pass: get axis limits
     Xlims(j,:) = get(handles.axes1,'Xlim');
@@ -873,7 +830,7 @@ locker = FigLocker.Lock(handles.figure1);
 
 % Open the Gui, with error protection:
 try
-    p = get(handles.Slider3D,'Value');      % Current phase
+    p = get(handles.PhaseSlider,'Value');      % Current phase
     hf = Solver(handles.Models,p);
     addlistener(hf,'HitTest','PreSet',@solverUpdater);
 catch ME
@@ -957,7 +914,7 @@ if isa(data,'Bone')
     end
     
     % Configure the slider:
-    configureSlider3d([],handles.Slider3D)
+    configurePhaseSlider([],handles.PhaseSlider)
     
     % Now we have to update the display:
     phaseDisplay(handles);
@@ -1011,7 +968,7 @@ end
 
 handles.HelicalAxis = calcHelicalAxes(handles.HelicalAxis,handles.Models);
 
-Slider3D_Callback(handles.Slider3D, 'init', handles)
+runCallback(handles.PhaseSlider, 'init')
 guidata(handles.figure1,handles)
 
 hl.unlock;
@@ -1097,4 +1054,3 @@ handles.MomentArm = marm;
 guidata(handles.figure1,handles)
 
 phaseDisplay(handles);
-

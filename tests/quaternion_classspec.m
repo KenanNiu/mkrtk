@@ -1,7 +1,7 @@
 clear all
 initTestSuite;
 
-% Last ported from Mark Tinknell's version of May 18th, 2012
+% Last compared to Mark Tinknell's version of 13-November-2012
 
 
 norm = @(v)sqrt( sum( v.^2 ) );

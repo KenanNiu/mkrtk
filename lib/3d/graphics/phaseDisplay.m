@@ -21,7 +21,7 @@ DYNAMIC = isequal('on', get(handles.ShowDynamicTool,'State'));
 CS      = isequal('on', get(handles.ShowAxesTool,   'State'));
 
 % Retrieve some variables: 
-p = get(handles.Slider3D,'Value');      % Current phase
+p = get(handles.PhaseSlider,'Value');   % Current phase
 nm = numel(handles.Models);             % Number of objects
 clrs = get(ha,'ColorOrder');
 
@@ -160,7 +160,7 @@ if ( DYNAMIC || HASMOTION )    % dynamic models are displayed OR motion exists
     swf = @swf3d;
     kpf = @kpf3d;
 end
-set([handles.Slider3D,handles.PhaseText],'Visible',an3dVis)
+set([handles.PhaseSlider,handles.PhaseText],'Visible',an3dVis)
 
 % Now straddle the update to the swf & kpf with turning off of the
 % exploration tools, then reverting them
