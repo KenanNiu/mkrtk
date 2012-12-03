@@ -582,9 +582,13 @@ flist = cellsmash(' ',flist);
 
 % Concatenate directories & files:
 list = [dlist;flist];
-set(hObject,'String',list)
-set(hObject,'Value', min( [get(hObject,'Value'),numel(list)] ) )
 
+% Now update - in the correct order to prevent warnings
+set(hObject,'ListboxTop', min( [get(hObject,'ListboxTop'), numel(list)] ) )
+drawnow update
+set(hObject,...
+    'String', list,...
+    'Value',      min( [get(hObject,'Value'),numel(list)] ) )
 end %file_list_refresh()
 
 
@@ -875,7 +879,6 @@ end %path_list_refresh()
 % ------------------------------------------------------------------------
 function set_directory(pathstring)
 % Central function for setting the currently displayed directory
-handles = gethandles();
 
 % First check if the directory is accessible:
 if isempty( dir(pathstring) ) % dir() should always return at least two entries: . and ..
@@ -887,6 +890,8 @@ end
 if ~isequal(pathstring(end),filesep)
     pathstring(end+1) = filesep;
 end
+
+handles = gethandles();
 
 % Set the path text string
 set(handles.Text_Pathstring,'String',pathstring)
@@ -982,8 +987,8 @@ set(hObject,...
     'Callback', cbk,...
     'String',   S,...
     'FontName', font,...
-    'Value',    v,...
     'ListboxTop', lbt,... 
+    'Value',    v,...
     'UserData', ud)
 
 % Hide/show slider:
