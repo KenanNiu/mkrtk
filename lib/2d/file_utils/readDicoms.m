@@ -4,9 +4,32 @@ function [X,z,ps,dinfo] = readDicoms(varargin)
 % [X,z,ps,dinfo] = readDicoms( cellPthFile ) loads the dicom files listed
 % in the N-by-1 cell array of full path-file strings
 %
-% This function is a wrapper for one of two methods for reading:
-%   DCM4CHE     - Java 
-%   DICOMREAD   - Matlab's native dicom reading utility
+% This function is a wrapper for Matlab's native DICOMREAD function.
+%
+% It used to also interface with the custom dcm4ch3 class which used the
+% dcm4che java libraries to read dicom files, but that was removed on
+% 06-Mar-2012.  Explanation follows.
+%
+% Calling the DCM4CHE java libraries through the custom dcm4che matlab
+% class object was about about 20-30% faster than DICOMREAD.  However,
+% getting the dicom header was really slow, and we need that for spacial
+% and temporal information. Reading the full header using the DCM4CHE class
+% and java libs is actually about 4 times slower than using DICOMINFO,
+% because DICOMINFO uses a mex file to do the basic parsing, and we have to
+% do a lot of manual parsing of the data returned from java.  So the claim
+% to fame here was that we could speed up the process and make it about 4
+% times faster than the MATLAB DICOMREAD + DICOMINFO version by only
+% reading in the dozen or so fields from that header that we were
+% interested in.
+%
+% Considering all that, it isn't worth using the java libs if we sacrifice
+% so much of the header info,  because in the future we may need more of
+% the header information which would not be saved in older sessions.  So we
+% now exclusively use the MATLAB functions again to load the entire header,
+% then it's there if we save that Segmentation session and need to access
+% that information later for upgrades or additional features.  Otherwise we
+% would have to source the dicom files again and re-read their headers.
+
 
 pathstr = [];
 if iscell(varargin{1})
@@ -22,82 +45,11 @@ end
 % Sort in natural order:
 files = sort_nat(files);
 
-% DCM4CHE is about 20-30% faster than DICOMREAD.  Hardly worth all the
-% effort.   And it's getting the dicom header that is really slow.
-% The full header read using the DCM4CHE class which uses java is actually
-% about 4 times slower than using DICOMINFO, because DICOMINFO uses
-% a mex file to do the basic parsing.  So the claim to fame here is that we
-% don't bother reading in the full header - we only read in those fields
-% that we are interested in.  The result is that the DCM4CHE method with
-% minimal header retrieval is about 4 times faster than using MATLAB's
-% DICOMREAD + DICOMINFO functions, but we've sacrificed reading much of the
-% header to get that speed.
-if dcm4che.libsloaded
-    [X,z,ps,dinfo] = dcm4che_dicom_read(pathstr,files);
-else
-    %warning('readDicoms:dcm4cheNotFound',...
-    %    'Could not find java files for dcm4che')
-    [X,z,ps,dinfo] = native_dicom_read(pathstr,files);
-end
+
+[X,z,ps,dinfo] = native_dicom_read(pathstr,files);
+
 
 end %readDicoms()
-
-
-% ------------------------------------------------------------------------
-function [X,z,ps,dinfo] = dcm4che_dicom_read(pathstr,files)
-
-n = numel(files);
-hw = waitbar(0,'Initialising...');
-wstr = @(j)sprintf('Reading DICOM file %d of %d',j,n);
-
-% We've already checked this, but just in case:
-if ~dcm4che.libsloaded()
-    error('Could not load dcm4che java libraries')
-end
-
-% Create a dcm4che object:
-dcm = dcm4che([pathstr files{1}]);
-
-% We can access the header fields individually, so instead of loading the
-% whole header, let's keep it fast and just load the fields we need:
-infofields = {...
-    'SeriesDescription',...
-    'SliceThickness',...
-    'PixelSpacing',...
-    'ImagePositionPatient',...
-    'ImageOrientationPatient',...
-    'NumberOfTemporalPositions',...
-    'AcquisitionNumber',...
-    'InstanceNumber'};
-sargs = infofields;
-[sargs{2,:}] = deal({});
-dinfo = struct(sargs{:});
-
-
-% Read first set of data:
-X = dcm.getImage;
-z = dcm.get('SliceLocation');
-dinfo(1) = dcm.get(infofields);
-
-% Expand for the remaining images:
-X(:,:,2:n) = NaN;
-z(2:n,1)   = NaN;
-dinfo(2:n,1) = dinfo;
-
-% Now read in the remaining images:
-for j = 2:n
-    waitbar(j/n,hw,wstr(j));
-    % Load next file:
-    dcm = dcm4che([pathstr files{j}]);
-    dinfo(j) = dcm.get(infofields);
-    X(:,:,j) = dcm.getImage();
-    z(j) = dcm.get('SliceLocation');
-end
-
-ps = dcm.get('PixelSpacing');
-close(hw)
-
-end %dcm4che_dicom_read()
 
 
 % ------------------------------------------------------------------------

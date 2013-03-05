@@ -15,8 +15,6 @@ roi_class_spec;
 cloud_class_spec;
 quaternion_classspec;
 
-%test_dcm4che;
-
 selectiveBrush_class_spec;
 figlocker_test;
 
