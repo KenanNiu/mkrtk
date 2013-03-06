@@ -939,7 +939,6 @@ while v < VSN
     v = v+1;
 end
 
-
 if VSN > 2
     % This is the current version specified in the classdef properties at
     % the top of this file, and also the version checked against in the
