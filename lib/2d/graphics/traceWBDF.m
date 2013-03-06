@@ -135,8 +135,8 @@ set(hf,'WindowButtonUpFcn', @traceWBUF);
                 
                 % Now create new roi
                 r = roi(x,y,s,p,dcm,PS,IPP,IOP,clr);
-                r = r.close;
                 r = r.equispace(DTGT);
+                r = r.close;
                 handles.traces(end+1) = r;
             else
                 % Join to roi recorded as parent

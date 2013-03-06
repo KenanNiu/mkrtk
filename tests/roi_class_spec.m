@@ -262,6 +262,19 @@ r.PixelSpacing = [1 1]*f;
 assertEqual(r.Length.mm, L*f)
 assertEqual(r.Area.mm,   A*f^2)
 
+%% Test some instance methods:
+
+re = r.equispace(1);
+figure, plot(r.x,r.y,'-*'), hold on, plot(re.x,re.y,'r*-')
+keyboard
+
+
+
+assertEqual( size(r.x), size(re.x) )
+keyboard
+dsv = hypot(diff(r.x),diff(r.y))
+
+
 
 %% Test conversion to 3D
 xy = [264.2465  258.0493  255.3760  254.5254  257.0772  264.8541  273.1171  277.9776  278.4637  276.5195  273.6031;

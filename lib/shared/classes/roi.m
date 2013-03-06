@@ -151,22 +151,45 @@ methods
     %----------------------------------------------
     function r = equispace(r,ds)
         % Respample at equal spacing
-        if nargin == 1
-            ds = 2;
-        end
-        CL = isclosed(r);
-        r = r.open;
-        
+        % Usage:
+        % To resample with the same number of points, equally distributed:
+        % along a piecewise cubic interpolating polynomial:
+        %   r = equispace(r)
+        %
+        % To resample with a specific spacing along the piecewise cubic
+        % interpolating polynomial, modifying the number of points
+        % accordingly: 
+        %   r = equispace(r,ds)
+
         dsv = hypot(diff(r.x),diff(r.y));
         s = [0; cumsum(dsv)];
         len = sum(dsv);
+        n_old = numel(r.x);
+        
+        if nargin == 1
+            ds = len/(n_old-1);
+        end
+        
         n = ceil( len/ds ) + 1;
         si = linspace(0,len,n)';
-        r.x = interp1(s,r.x,si,'pchip'); 
-        r.y = interp1(s,r.y,si,'pchip');
         
-        if CL
-            r = r.close;
+        % Curved b-spline interpolate option for rois, if the function is
+        % available:
+        if exist('csape','file') == 2
+            if r.isclosed
+                opt = {'periodic'};
+            else
+                opt = {'variational'};
+            end
+            ppx = csape(s,r.x,opt{:});
+            ppy = csape(s,r.y,opt{:});
+            r.x = ppval(ppx,si);
+            r.y = ppval(ppy,si);
+        
+        else
+            % Alternatively fall back onto an approximate approach
+            r.x = interp1(s,r.x,si,'linear');
+            r.y = interp1(s,r.y,si,'linear');
         end
         
     end %equispace()
@@ -900,22 +923,30 @@ Res = p.Results;        % Take a copy so we can do our own parsing & modify
 % methods?
 
 v = 0;
-if isfield(s,'Version')
+if isfield(s,'Version') % For when s is a struct
     v = s.Version;
-elseif isa(s,'roi')
+elseif isa(s,'roi')     % For when s is a roi class object
     v = s.Version;
 end
 
 
-% Manage all possible combinations of upgrades:
-if v == 0 && VSN == 2       % 0 -> 2
-    s = ver0to1(s);
-    s = ver1to2(s);
-elseif v == 1 && VSN == 2   % 1 -> 2
-    s = ver1to2(s);
-elseif v == 2 && VSN == 2   % 2 -> 2
-    s = mergeStructs(sVersionDef(2,[]),s); 
-else
+while v < VSN
+    % Run upgrades in order by looping, ie:
+    %   s = ver0to1(s)
+    %   s = ver1to2(s) 
+    % ...etc
+    s = eval(sprintf('ver%dto%d(s)',v,v+1));
+    v = v+1;
+end
+
+
+if VSN > 2
+    % This is the current version specified in the classdef properties at
+    % the top of this file, and also the version checked against in the
+    % tests.  
+    % This is specified manually rather than reading from the class
+    % definition to ensure that all upgrades have been defined when the
+    % version number is incremented
     error(message('ROI:struct2roi:UnhandledVersion',VSN))
 end
 
@@ -926,7 +957,7 @@ s = mergeStructs(s,Res);
 % old or redundant ones.
 
     % -------------------------------------------   
-    function s = ver0to1(s)
+    function s = ver0to1(s) %#ok<DEFNU> <= called using EVAL
         % Upgrade from version 0 to version 1
         % Going from 0 -> 1, we added:
         %   DcmFile
@@ -938,7 +969,7 @@ s = mergeStructs(s,Res);
     end %ver0to1()
 
     % -------------------------------------------
-    function s = ver1to2(s)
+    function s = ver1to2(s) %#ok<DEFNU> <= called using EVAL
         % Upgrage from version 1 to version 2
         %
         % Unfortunately, there was a change without a version increment, so
@@ -1016,7 +1047,7 @@ names = names( pub | prot );
 for k = 1:numel(s)
     r(k).Tag = genTag();
     
-    % First we need to make the structure a fully ratified according to the
+    % First we need to make the structure a fully ratified structure according to the
     % current version of the class.  If ratifyStruct is not up to date with the
     % current version, it will throw an error.
     tmp = ratifyStruct(s(k),r(k).Version,varargin{:});
