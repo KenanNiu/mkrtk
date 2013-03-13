@@ -203,6 +203,9 @@ refreshNodeSpace( catNodes );
 % Make root the initially selected node:
 tree.setSelectedNode( rootNode );
 
+% Enable multi-selection:
+tree.setMultipleSelectionEnabled( true );
+
 % Now display the tree
 set(tree,'Visible',true)
 
@@ -736,7 +739,7 @@ function handles = addStaticFileNode(handles,parent,filepath)
 % Delete old file node, if one exists:
 if parent.getChildCount > 0
     handles.tree.setSelectedNode( parent.getFirstChild )
-    handles = removeSelectedNode(handles);
+    handles = removeSelectedNodes(handles);
 end
 
 % Then add a new file node:
@@ -1148,7 +1151,7 @@ function RemoveButton_Cbk(hObject, ~)
 %REMOVEBUTTON_CBK Remove the currently selected item
 
 handles = guidata(hObject);
-handles = removeSelectedNode(handles);
+handles = removeSelectedNodes(handles);
 
 % Update handles:
 guidata(hObject,handles)
@@ -1160,27 +1163,52 @@ end %RemoveButton_Cbk()
 
 
 % ------------------------------------------------------------------------
-function handles = removeSelectedNode(handles)
+function handles = removeSelectedNodes(handles)
 %REMOVESELECTEDNODE Remove the currently selected node from TREE and
 % re-sets the selection.
 tree = handles.tree;
-node = first(tree.getSelectedNodes);
-parent = node.getParent;
-if ~node.isRoot
-    % Adjust node selection
-    nP = node.getPreviousSibling;
-    nN = node.getNextSibling;
-    if ~isempty( nN )
-        nSel = nN;
-    elseif ~isempty( nP )
-        nSel = nP;
-    else
-        nSel = node.getParent;
-    end
-    tree.setSelectedNode( nSel );
-    
-    handles = removeThisNode(handles,node);
-    
+nodes = tree.getSelectedNodes;
+
+% Let's only allow removing of nodes that have the same parent:
+for j = nodes.numel : -1 : 1
+    parent(j) = nodes(j).getParent;
+    same_parent(j) = parent(j) == parent(end);
+end
+if ~all(same_parent)
+    errordlg(['When removing more than one object, the objects must ',...
+        'all have the same parent. Change your selection and try again.'],...
+        'Mixed selection not allowed','modal')
+    return
+end
+
+% Root node cannot be removed (noting that if the root node is selected, it
+% will be the only one of its kind, and by passing the test above it will
+% be the only selected node):
+if isRoot(first(nodes))
+    return
+end
+
+% All the parents are the same, so collapse array to single:
+parent = parent(1);
+
+% Adjust selection:
+%   Now that we have a node list, change the selection by selecting either
+%   the next sibling (if there is one), or the previous sibling (if there
+%   is one, or the parent (if there are no siblings):
+nP = nodes(1).getPreviousSibling;
+nN = nodes(end).getNextSibling;
+if ~isempty( nN )
+    nSel = nN;
+elseif ~isempty( nP )
+    nSel = nP;
+else
+    nSel = parent;
+end
+tree.setSelectedNode( nSel );
+
+% Then remove the nodes:
+for j = 1:numel(nodes)
+    handles = removeThisNode(handles,nodes(j));
 end
 
 % Update the file count in category names:
@@ -1188,7 +1216,7 @@ if parent.getLevel == 2
     updateCatName(tree,parent)
 end
 
-end %removeSelectedNode()
+end %removeSelectedNodes()
 
 % ------------------------------------------------------------------------
 function handles = removeThisNode(handles,node)
