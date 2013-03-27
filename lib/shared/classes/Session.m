@@ -148,37 +148,62 @@ methods (Static)
     end %reset
     
     % ---------------------------------------------
-    function [filepath,ok] = save(defaultpath,handles) %#ok<INUSD>
+    function [filepath,ok] = save(handles,defaultpath,PROMPT) %#ok<INUSL>
         %SAVE Shared helper function to save session files
         %
         % SAVE saves all data in HANDLES, using DEFAULTPATH as the default
         % path for the UIPUTFILE dialog.
+        %
+        % Usage:
+        %   SESSION.SAVE(HANDLES) prompts the user to save the handles
+        %       structure using the current directory as the default path
+        %   
+        %   SESSION.SAVE(HANDLES,DEFAULTPATH) prompts the user to save the
+        %       handles structure using DEFAULTPATH as the default path for
+        %       the UIPUTFILE dialog
+        %
+        %   SESSION.SAVE(HANDLES,DEFAULTPATH,PROMPT) where PROMPT=false will
+        %       skip the UIPUTFILE dialog and directly save HANDLES to the
+        %       specified DEFAULTPATH
         
-        % Request mat file name
-        [filename, pathname] = uiputfile( ...
-            {'*.mat','MAT-files (*.mat)'},'Save session as',defaultpath);
+        if ~exist('PROMPT','var')
+            PROMPT = true;
+        end
+        ok = false; % default
         
-        % Abort if the user cancelled:
-        ok = false;
-        if isequal(filename, 0)
-            filepath = '';
-            disp('User Cancelled')
-            return
+        % Determine filename & path, either from dialog, or directly from
+        % function input arg:
+        if PROMPT
+            % Request mat file name
+            [filename, pathname] = uiputfile( ...
+                {'*.mat','MAT-files (*.mat)'},'Save session as',defaultpath);
+            
+            % Abort if the user cancelled:
+            if isequal(filename, 0)
+                filepath = '';
+                disp('User Cancelled')
+                return
+            end
+            
+            filepath = [pathname filename];
+            
+        else
+            filepath = defaultpath;
+            
         end
         
-        filepath = [pathname filename];
-        
         % Not sure why, but sometimes the save will crack the sads when
-        % trying to over-write an existing file.  If this is the case, give
-        % it a couple of shots with a pause in between to see if it will
-        % work eventually:
+        % trying to over-write an existing file.  This usually only happens
+        % when trying to write to file on a network.  If this is the case,
+        % give  it a couple of shots with a pause in between to see if it
+        % will work eventually:
         n = 5;      % Try up to 5 times
         for j = 1:n
             try
                 disp('Saving session...')
                 save(filepath,'handles')
                 disp('Session saved successfully.')
-                ok = true;
+                ok = true;  % success
                 break
             catch ME %#ok<NASGU>
                 pause(0.5)

@@ -22,7 +22,7 @@ function varargout = Segmentation(varargin)
 
 % Edit the above text to modify the response to help Segmentation
 
-% Last Modified by GUIDE v2.5 11-Sep-2012 15:25:32
+% Last Modified by GUIDE v2.5 27-Mar-2013 10:39:59
 
 % ------------------------------------------------------------------------
 % NOTES 
@@ -180,30 +180,12 @@ function MI_OpenSession_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Lock figure:
-locker = FigLocker.Lock(handles.figure1);
+[handles,ok] = load_session(handles);
 
-% Get file from usesr
-[filename, pathname] = uigetfile(...
-    {'*.mat','MAT-files (*.mat)'},'Load session',handles.sessionPath);
-
-if isequal(filename,0)
-    locker.unlock
-    return
-end
-
-[handles,ok] = Session.load(handles,[pathname filename]);
+% Configure/reset the view
 if ok
-    % Update guidata:
-    guidata(hObject,handles)
-    
-    % Configure/reset the view
     configureView2(handles)
 end
-
-locker.unlock;
-
-
 
 
 % ------------------------------------------------------------------------
@@ -212,23 +194,16 @@ function MI_SaveSession_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Lock figure
-locker = FigLocker.Lock(handles.figure1);
+save_session(hObject,handles);
 
-% Default path:
-seedPath = handles.sessionPath;
-if isempty(seedPath) && ~isempty(handles.userPath)
-    seedPath = handles.userPath;
-end
-% Shared function:
-[pathname,ok] = Session.save(seedPath,handles);
-if ok
-    handles.sessionPath = pathname;
-    guidata(hObject,handles)
-end
 
-% Unlock figure:
-locker.unlock;
+% --------------------------------------------------------------------
+function MI_SaveSessionAs_Callback(hObject, eventdata, handles)
+% hObject    handle to MI_SaveSessionAs (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+save_session(hObject,handles);
 
 
 % --------------------------------------------------------------------
