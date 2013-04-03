@@ -132,7 +132,7 @@ end
 if ~isempty(handles.LineOfAction)
     for j = 1:numel(handles.LineOfAction)
         lj = handles.LineOfAction(j);
-        if lj.Visible && isfield(lj,'Pt') && isfield(lj,'Vec')
+        if lj.Visible && isfield(lj,'Point') && isfield(lj,'Vector')
             
             c2id = strcmp({handles.Models.Tag},handles.HelicalAxis(j).Item2);
             %hclr = clrs(c2id,:);
@@ -143,6 +143,15 @@ if ~isempty(handles.LineOfAction)
     end
 end
 
+% ---------- Draw Moment Arm
+if ~isempty(handles.MomentArm)
+    for j = 1:numel(handles.MomentArm)
+        mj = handles.MomentArm(j);
+        if mj.Visible && isfield(mj,'Point1') && isfield(mj,'Point2')
+            plotMomentArm(ha,mj.Point1(p,:),mj.Point2(p,:),qprops{:});
+        end
+    end
+end
 
 
 % ----------- Configure slider & annotation
