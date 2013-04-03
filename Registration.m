@@ -22,7 +22,7 @@ function varargout = Registration(varargin)
 
 % Edit the above text to modify the response to help Registration
 
-% Last Modified by GUIDE v2.5 27-Mar-2013 12:21:53
+% Last Modified by GUIDE v2.5 03-Apr-2013 13:57:55
 
 % ------------------------------------------------------------------------
 % NOTES 
@@ -147,11 +147,6 @@ handles = initTools(handles,modestr);
 
 % Initialise our session variables:
 handles = Session.new(handles);
-
-% Reserve space for axis definitions:
-%handles.HelicalAxis  = [];
-%handles.LineOfAction = [];
-%handles.MomentArm    = [];
 
 % Configure view mode:
 configureView3(handles)
@@ -497,13 +492,79 @@ function MI_TendonLoA_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 
-addpath('tendon_loa_wip')
-Loa_data = tendon_calculator(handles);
+studyname = getStudyName(handles.Models(1).LoRes(1).Path);
+
+Loa_data = tendon_calculator(handles,studyname);
+
+% See Registration > analysisUpdater() for how to configure this function
+% correctly
 
 handles.LineOfAction(1).Point  = Loa_data(:,1:3);
 handles.LineOfAction(1).Vector = Loa_data(:,4:6);
 
+handles.MomentArm = calcMomentArms(handles.MomentArm,...
+    handles.HelicalAxis, handles.LineOfAction);
+
+
 guidata(hObject,handles)
+
+
+
+% --------------------------------------------------------------------
+function MI_PlotMomentArm_Callback(hObject, eventdata, handles)
+% hObject    handle to MI_PlotMomentArm (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Update moment arms (this call should be moved elsewhere)
+handles.MomentArm = calcMomentArms(handles.MomentArm,...
+    handles.HelicalAxis, handles.LineOfAction);
+
+guidata(hObject,handles)
+
+
+Hax = handles.HelicalAxis(end);
+theta = handles.HelicalAxis(end).Angle*180/pi;
+Hax = [Hax.Point Hax.Axis];
+
+Marm = handles.MomentArm;
+
+studyname = getStudyName(handles.Models(1).LoRes(1).Path);
+var_name = [studyname '_Moment_Arm'];
+assignin('base',var_name,Marm.Length)
+evalin('base',var_name)
+clipboard('copy',sprintf('%10.4f\n',Marm.Length))
+disp('|--> Copied to clipboard')
+
+%
+hf = figure;
+ax1 = subplot(2,1,1);
+plot(Marm.Length,'b-')
+hold on,
+plot(Marm.Length,'r*')
+%set(ax1,'Ycolor',[0 0 0.8])
+xl = xlim(ax1);
+yl = ylim(ax1);
+xlim(ax1,[0 xl(2)])
+ylim(ax1,[0 ceil(yl(2)*5)/5])
+xlabel(ax1,'Phase ID')
+ylabel(ax1,'Moment arm [mm]')
+grid on
+
+ax2 = subplot(2,1,2);
+plot(ax2,theta,'Color',[0 0.9 0]), hold on
+plot(ax2,zeros(size(theta)),'color',[0 0.5 0],'LineStyle','--')
+%set(ax2,'Color','none')
+%set(ax2,'YColor',[0 0.5 0])
+%set(ax2,'YAxisLocation','right')
+%n = numel(get(ax1,'YTick'));
+%tlim = round(max(abs(theta)*n));
+%set(ax2,'Ylim',[-tlim n*tlim])
+%set(ax2,'YTick',linspace(-tlim,tlim,n))
+ylim(ax2, ylim(ax2)*2)
+ylabel(ax2,'Helical axis rotation angle [deg]')
+grid on
+
 
 
 % ------------------------------------------------------------------------
@@ -938,10 +999,6 @@ if any(tf)
     handles.HelicalAxis(tf) = calcHelicalAxes(handles.HelicalAxis(tf),models);
 end
 
-% Now recalculate helical axes if required:
-
-handles.HelicalAxis = calcHelicalAxes(handles.HelicalAxis,handles.Models);
-
 runCallback(handles.PhaseSlider, 'init')
 guidata(handles.figure1,handles)
 
@@ -1010,7 +1067,7 @@ end
 
 if any(marm_update)
     hl.settext('Updating moment arms')
-    marm(marm_update) = calcMomentArms(marm(marm_update),handles.Models);
+    marm(marm_update) = calcMomentArms(marm(marm_update),hax,loa);
 end
 
 % Unlock figure:
@@ -1028,3 +1085,4 @@ handles.MomentArm = marm;
 guidata(handles.figure1,handles)
 
 phaseDisplay(handles);
+

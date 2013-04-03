@@ -1,5 +1,5 @@
 function hax = calcHelicalAxes(hax,models,opt)
-% OPT is used by 
+% OPT is used by joint_dt_proxy()
 
 q = [models.q];
 x = {models.x};

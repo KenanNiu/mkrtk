@@ -5,7 +5,7 @@ function M = curve_midline(X)
 if iscell(X)
     % Recursion:
     M = cell(size(X));
-    parfor j = 1:numel(X)
+    for j = 1:numel(X)
 %        print_status()
         M{j} = curve_midline(X{j});
     end

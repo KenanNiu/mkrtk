@@ -1,4 +1,4 @@
-function d = momentArm(p1,p2,p3,p4)
+function [d,P1,P2] = momentArm(p1,p2,p3,p4)
 %MOMENTARM Calculate moment arm from two lines, each defined by two points.
 %
 % See also distanceLines3d.m in geom3d toolbox
@@ -6,6 +6,7 @@ function d = momentArm(p1,p2,p3,p4)
 
 %==== METHOD 1 ====%
 % See :
+%   http://geomalgorithms.com/a07-_distance.html
 %   http://softsurfer.com/Archive/algorithm_0106/algorithm_0106.htm
 
 TOL = 1e-7;
@@ -33,6 +34,19 @@ end
 d3 = w + (sc*u) - (tc*v);
 
 d = norm(d3);
+
+if nargout > 1
+    % Intersection is defined at these two points:
+    
+    % Q(tc) = Q0 + tc*(Q1-Q0)
+    Qtc = p3 + tc*v;
+    % P(sc) = P0 + sc*(P1-P0)
+    Psc = p1 + sc*u;
+    
+    % Outputs:
+    P1 = Qtc;
+    P2 = Psc;
+end
 %}
 
 %==== METHOD 2 ====%
@@ -46,16 +60,5 @@ v3 = cross(v1,v2)
 d = abs( dot((p2-p1), v3) / norm(v3) )
 %}
 
-
-%==== PLOTTING ====%
-%{
-% Plot
-myplot3 = @(X,varargin) plot(X(:,1),X(:,2),X(:,3),varargin{:});
-figure
-hold on
-axis vis3d
-axis equal
-myplot3()
-%}
 
 
