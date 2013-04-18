@@ -9,6 +9,8 @@ function draggable(hobj,varargin)
 %   This function depends on the following:
 %       - NEAREST_POINT_ON_POLYLINE
 %       - MUTUAL_PERPENDICULAR
+%       - GEOM3D toolbox (FEX)
+%       - and probably others...
 
 % Handle vector inputs:
 if numel(hobj) > 1
@@ -47,13 +49,23 @@ function configure_cp(obj,opts)
 constraint      = opts.constraint_type;
 constraint_data = opts.constraint_data;
 
+% Object data:
+xo = get(obj,'XData'); xo = xo(:);
+yo = get(obj,'YData'); yo = yo(:);
+zo = get(obj,'ZData'); zo = zo(:);
+
 switch lower(constraint)
     
     case 'none'
-        % do nothing
+        % Set the control point
+        cp = mean( [xo, yo, zo], 1);
+        manipulate(obj,'setcontrolpoint',cp)
         
     case 'hghandle'
         hc = constraint_data;
+        xc = get(hc,'XData');
+        yc = get(hc,'YData');
+        zc = get(hc,'ZData');
         switch get(hc,'type')
             
             case 'line'
@@ -61,27 +73,17 @@ switch lower(constraint)
                 
                 % OBJ is a line, and we're constraining it to HC which is
                 % also a line.
-                % >> Set control point as closest point:
-                xc = get(hc,'XData');
-                yc = get(hc,'YData');
-                zc = get(hc,'ZData');
-                xo = get(obj,'XData');
-                yo = get(obj,'YData');
-                zo = get(obj,'ZData');
-                [pc,po] = polylines_nearest_passing_points([xc(:) yc(:) zc(:)],[xo(:) yo(:) zo(:)]);
                 
-                d3 = pc - po;
-                xo = xo + d3(1);
-                yo = yo + d3(2);
-                zo = zo + d3(3);
+                % Find nearest passing points:                
+                [pc,po] = polylines_nearest_passing_points([xc(:) yc(:) zc(:)],[xo yo zo]);
                 
-                set(obj,'XData',xo)
-                set(obj,'YData',yo)
-                set(obj,'ZData',zo)
+                % Set the control point on the object:
+                manipulate(obj,'setcontrolpoint',po)
                 
-                set_control_point(obj,pc)
+                % Move object to the point on the constraining object:
+                manipulate(obj,'moveto',pc)                
                 
-                % In this case
+                
             otherwise
                 error('unhandled hg type')
         end
@@ -122,57 +124,45 @@ end
 function motion_fcn(fig,~,obj)
 ax = ancestor(obj,'axes');
 
-current_point_old  = get_stored_current_point(obj);    % Current axes point, 2-by-3
+% Current cursor location
 current_point_new = get(ax,'CurrentPoint');
 
 opts = getappdata(obj,'draggable_object_data');
 constraint = opts.constraint_type;
 constraint_data = opts.constraint_data;
 
-% Get point data of the object:
-x = get(obj,'XData');
-y = get(obj,'YData');
-z = get(obj,'ZData');
-
-
 switch lower(constraint)
     
     case 'none'
         % Free movement:
-        % Does not use the control point (draggable_ControlPoint)
         
-        dp = mean( current_point_new - current_point_old, 1 );    % Displacement
-        x = x + dp(1);      %\
-        y = y + dp(2);      % > New location
-        z = z + dp(3);      %/
+        % Last recorded cursor location
+        current_point_old  = get_stored_current_point(obj);    % Current axes point, 2-by-3
         
-        set_stored_current_point(obj,current_point_new);
+        % Find displacement:
+        dp = mean( current_point_new - current_point_old, 1 );
+        
+        % Translate object:
+        manipulate(obj,'translate',dp)
+        
         
     case 'hghandle'
         % In this case a graphics object is specified for the constraint
         hc = constraint_data;
         
-        % These objects also use a control point to handle movement:
-        control_point_old = get_control_point(obj);
-        
+        % Handle each differty type of constraint:
         switch get(hc,'Type')
             case 'line'
                 curve_xyz = [get(hc,'XData')',get(hc,'YData')',get(hc,'ZData')'];
                 
-                control_point_new = constrained_displacement_line(control_point_old,current_point_new,curve_xyz);
+                control_point_new = constrained_displacement_line(current_point_new,curve_xyz);
                 
-                % Set new control point:
-                dp = control_point_new - control_point_old;
-                
-                % New location:
-                x = x + dp(1);
-                y = y + dp(2);
-                z = z + dp(3);
+                manipulate(obj,'moveto',control_point_new)
+
                                 
             otherwise
                 error('unhandled graphics object type')
         end
-        set_control_point(obj,control_point_new);
     
         %case {'linesegment','line_segment'}
         % Constrained by list of 2D or 3D points which define a line
@@ -183,13 +173,14 @@ switch lower(constraint)
         
 end
 
-set(obj,'XData',x,'YData',y,'ZData',z)
+% Update the stored current point
+set_stored_current_point(obj,current_point_new)
 
 
 
 
 % ------------------------------------------------------------------------
-function cp_3d_coinc = constrained_displacement_line(previous_point,current_point,curve_xyz)
+function cp_3d_coinc = constrained_displacement_line(current_point,curve_xyz)
 % SELECTED_POINT should be in the format of the 'CurrentPoint' axes
 % property
 %
@@ -209,18 +200,6 @@ cp_2d  = planePosition(p0,plane);           % Just in case
 pt_on_curve = @(xyz,seg,t) xyz(seg,:) + t*(xyz(seg+1,:) - xyz(seg,:));
 cp_3d_coinc = pt_on_curve(curve_xyz,cp_seg_id,cp_t);%curve_xyz(cp_seg_id,:) + cp_t*(curve_xyz(cp_seg_id+1,:) - curve_xyz(cp_seg_id,:));
 
-
-return
-% Now to find the displacement, we need to do the same thing for 
-% previous_point
-pp_2d = planePosition(previous_point(1,:),plane);
-[~,~,pp_seg_id,pp_t] = nearest_point_on_polyline(pp_2d, crv_2d);
-pp_3d_coinc = pt_on_curve(curve_xyz,pp_seg_id,pp_t);
-
-dp = cp_3d_coinc - pp_3d_coinc;
-
-%plot3(cp_3d_coinc(1),cp_3d_coinc(2),cp_3d_coinc(3),'mx')
-%plot3(pp_3d_coinc(1),pp_3d_coinc(2),pp_3d_coinc(3),'gx')
 
 
 % ------------------------------------------------------------------------
