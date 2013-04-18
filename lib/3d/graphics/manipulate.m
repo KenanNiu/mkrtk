@@ -27,10 +27,19 @@ end
 function move(obj,dcp)
 
 % Translate the object:
-x = get(obj,'XData') + dcp(1);
-y = get(obj,'YData') + dcp(2);
-z = get(obj,'ZData') + dcp(3);
-set(obj,'XData',x,'YData',y,'ZData',z)
+switch lower( get(obj,'type') )
+    
+    case 'hgtransform'
+        T = get(obj,'Matrix');
+        T(1:3,4) = T(1:3,4) + dcp(:);
+        set(obj,'Matrix',T)
+        
+    otherwise
+        x = get(obj,'XData') + dcp(1);
+        y = get(obj,'YData') + dcp(2);
+        z = get(obj,'ZData') + dcp(3);
+        set(obj,'XData',x,'YData',y,'ZData',z)
+end
 
 % Adjust its control point:
 cp_old = getcontrolpoint(obj);

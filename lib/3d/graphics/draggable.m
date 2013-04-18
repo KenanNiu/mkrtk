@@ -25,26 +25,34 @@ end
 fig = ancestor(hobj,'figure');
 ax  = ancestor(hobj,'axes');
 
-% Store all the data that we over-ride:
+% Store all the figure data that we over-ride:
 initial.wbmf = get(fig,'WindowButtonMotionFcn');
 initial.wbuf = get(fig,'WindowButtonUpFcn');
 initial.wbdf = get(fig,'WindowButtonDownFcn');
 setappdata(fig,'draggable_initial_data',initial);
 
+%set(hobj,'ButtonDownFcn',@button_down)
+
 % Configure the object's control point
-configure_cp(hobj,object_data)
+configure(hobj,object_data);
 
 % Add properties
-%setappdata(fig,'draggable_shared_data',shared_data)
 setappdata(hobj,'draggable_object_data',object_data)
 
 % Enable draggable by setting the ButtonDownFcn on the object:
 set(hobj,'ButtonDownFcn',@button_down)
 
+% ------------------------------------------------------------------------
+% ------------------------------------------------------------------------
+function hgt = configure(obj,opts)
 
-% ------------------------------------------------------------------------
-% ------------------------------------------------------------------------
-function configure_cp(obj,opts)
+ax = ancestor(obj,'axes');
+
+% Configure the hgtransform object:
+hgt = hgtransform('Parent',ax);
+set(obj,'Parent',hgt)
+setappdata(hgt,'target_object',obj)
+setappdata(obj,'transform_object',hgt)
 
 constraint      = opts.constraint_type;
 constraint_data = opts.constraint_data;
@@ -59,7 +67,7 @@ switch lower(constraint)
     case 'none'
         % Set the control point
         cp = mean( [xo, yo, zo], 1);
-        manipulate(obj,'setcontrolpoint',cp)
+        manipulate(hgt,'setcontrolpoint',cp)
         
     case 'hghandle'
         hc = constraint_data;
@@ -78,10 +86,10 @@ switch lower(constraint)
                 [pc,po] = polylines_nearest_passing_points([xc(:) yc(:) zc(:)],[xo yo zo]);
                 
                 % Set the control point on the object:
-                manipulate(obj,'setcontrolpoint',po)
+                manipulate(hgt,'setcontrolpoint',po)
                 
                 % Move object to the point on the constraining object:
-                manipulate(obj,'moveto',pc)                
+                manipulate(hgt,'moveto',pc)                
                 
                 
             otherwise
@@ -100,7 +108,8 @@ fig = gcf;
 ax  = gca;
 set(fig,'WindowButtonMotionFcn',{@motion_fcn,obj})
 set(fig,'WindowButtonUpFcn',{@button_up,obj})
-set_stored_current_point(obj,get(ax,'CurrentPoint'));    % Initialize from axes
+hgt = getappdata(obj,'transform_object');
+set_stored_current_point(hgt,get(ax,'CurrentPoint'));    % Initialize from axes
 
 
 % ------------------------------------------------------------------------
@@ -127,6 +136,8 @@ ax = ancestor(obj,'axes');
 % Current cursor location
 current_point_new = get(ax,'CurrentPoint');
 
+% Graphics transform object:
+hgt = getappdata(obj,'transform_object');
 opts = getappdata(obj,'draggable_object_data');
 constraint = opts.constraint_type;
 constraint_data = opts.constraint_data;
@@ -137,13 +148,13 @@ switch lower(constraint)
         % Free movement:
         
         % Last recorded cursor location
-        current_point_old  = get_stored_current_point(obj);    % Current axes point, 2-by-3
+        current_point_old  = get_stored_current_point(hgt);    % Current axes point, 2-by-3
         
         % Find displacement:
         dp = mean( current_point_new - current_point_old, 1 );
         
         % Translate object:
-        manipulate(obj,'translate',dp)
+        manipulate(hgt,'translate',dp)
         
         
     case 'hghandle'
@@ -157,7 +168,7 @@ switch lower(constraint)
                 
                 control_point_new = constrained_displacement_line(current_point_new,curve_xyz);
                 
-                manipulate(obj,'moveto',control_point_new)
+                manipulate(hgt,'moveto',control_point_new)
 
                                 
             otherwise
@@ -174,9 +185,7 @@ switch lower(constraint)
 end
 
 % Update the stored current point
-set_stored_current_point(obj,current_point_new)
-
-
+set_stored_current_point(hgt,current_point_new)
 
 
 % ------------------------------------------------------------------------
@@ -228,23 +237,15 @@ objdata.btnupfcn = p.Results.buttonupfcn;
 objdata.endfcn = p.Results.endfcn;
 
 
-% ------------------------------------------------------------------------
-function pt = get_control_point(obj)
-pt = getappdata(obj,'draggable_ControlPoint');
-
-% ------------------------------------------------------------------------
-function set_control_point(obj,pt)
-assert( numel(pt) == 3 )
-setappdata(obj,'draggable_ControlPoint',pt)
 
 % ------------------------------------------------------------------------
 function pt = get_stored_current_point(obj)
-pt = getappdata(obj,'draggable_AxesCurrentPoint');
+pt = getappdata(obj,'AxesCurrentPoint');
 
 % ------------------------------------------------------------------------
 function set_stored_current_point(obj,pt)
 assert( numel(pt) == 6 )
-setappdata(obj,'draggable_AxesCurrentPoint',pt);
+setappdata(obj,'AxesCurrentPoint',pt);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                    Constraint functions
