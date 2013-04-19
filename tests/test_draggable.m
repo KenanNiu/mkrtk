@@ -5,7 +5,7 @@ w = 10;
 [mpath.x,mpath.y,mpath.z] = create_circular_path(w);
 
 figure
-curve = plot3(mpath.x,mpath.y,mpath.z,'.-');
+curve = plot3(mpath.x,mpath.y,mpath.z+2,'.-');
 axis equal
 grid on
 hold on
@@ -34,6 +34,17 @@ draggable(line)%,'ConstrainTo',curve)
 axis auto
 axis tight
 
+
+%------------ Interactive plane ----------%
+p0  = [0 0 0];
+nml = [1 0 0];
+p = createPlane(p0,nml);
+
+hp = drawPlane3d(p);
+
+draggable(hp,'AllowRotate',1)
+
+%keyboard
 
 
 function [x,y,z] = create_circular_path(radius)
