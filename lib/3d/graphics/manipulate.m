@@ -52,6 +52,41 @@ cp_old = getcontrolpoint(obj);
 move(obj, cp_new - cp_old);
 
 
+function rotate(obj,varargin)
+switch lower( get(obj,'type') )
+    
+    case 'hgtransform'
+        H = get(obj,'Matrix');
+        Hr = makehgtform(varargin{:});
+        
+        if ~isreal(Hr)
+            keyboard
+        end
+        if ~isreal(Hr)
+            keyboard
+        end
+            
+        cp = getcontrolpoint(obj);
+        
+        % Apply rotation to current Matrix
+        H = Hr*H;
+        
+        % Now un-shift        
+        cp2 = (Hr(1:3,1:3)*cp')';
+        dt = cp - cp2;
+        H(1:3,4) = H(1:3,4) + dt(:);
+        
+        % Update:
+        set(obj,'Matrix',H)
+                
+        
+    otherwise
+        error('not implemented')
+end
+
+% Control point should not have changed
+
+
 function translate(obj,varargin)
 % Alias for 'move'
 move(obj,varargin{:})
