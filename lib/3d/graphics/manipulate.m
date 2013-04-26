@@ -1,17 +1,22 @@
 function varargout = manipulate(obj,action,varargin)
 % Graphics object manipulator
 
-% manipulate(hobj,'initialize',[x y z])
-% manipulate(hobj,'initialize',cobj)
-% manipulate(hobj,'get')
-% manipulate(hobj,'set',pt)
-% manipulate(hobj,'move',[dx dy dz])
+% Setter methods:
+%   manipulate(hobj,'setcontrolpoint',pt)
+%   manipulate(hobj,'translate',[dx dy dz])
+%   manipulate(hobj,'translateto',[x y z])      
+%   manipulate(hobj,'move',[dx dy dz])          % alias for 'translate'       
+%   manipulate(hobj,'moveto',[x y z])           % alias for 'translateto'       
+%   manipulate(hobj,'rotate',R)                 % rotate around control point with matrix R 
+%   manipulate(hobj,'rotate',...)               % rotation with inputs as per hgtransform 
+%
+% Getter methods:
+% pt = manipulate(hobj,'getcontrolpoint')
 
 
 varargout = {};
 
 % Run the requested function:
-%feval( lower(action), obj, varargin{:} );
 fname = lower(action);
 fun = str2func( fname );
 
@@ -24,6 +29,7 @@ else
 end
 
 
+% ------------------------------------------------------------------------
 function move(obj,dcp)
 
 % Translate the object:
@@ -47,25 +53,30 @@ cp_new = cp_old + dcp;
 setcontrolpoint(obj,cp_new)
 
 
+% ------------------------------------------------------------------------
 function moveto(obj,cp_new)
 cp_old = getcontrolpoint(obj);
 move(obj, cp_new - cp_old);
 
 
-function rotate(obj,varargin)
+% ------------------------------------------------------------------------
+function rotate(obj,varargin) %#ok<DEFNU>
 switch lower( get(obj,'type') )
     
     case 'hgtransform'
         H = get(obj,'Matrix');
-        Hr = makehgtform(varargin{:});
         
-        if ~isreal(Hr)
-            keyboard
+        
+        if isequal( size(varargin{1}), [3,3] )
+            % manipulate(hobj,'rotate',R)
+            R = varargin{1};
+            Hr = [R, [0;0;0]; 0 0 0 1];
+        else
+            % manipulate(hobj,'rotate','xrotate',t)
+            % manipulate(hobj,'rotate','axisrotate',axis,angle)
+            % ... etc ...
+            Hr = makehgtform(varargin{:});
         end
-        if ~isreal(Hr)
-            keyboard
-        end
-            
         cp = getcontrolpoint(obj);
         
         % Apply rotation to current Matrix
@@ -87,23 +98,26 @@ end
 % Control point should not have changed
 
 
-function translate(obj,varargin)
+% ------------------------------------------------------------------------
+function translate(obj,varargin) %#ok<DEFNU>
 % Alias for 'move'
 move(obj,varargin{:})
 
-function translateto(obj,varargin)
+% ------------------------------------------------------------------------
+function translateto(obj,varargin) %#ok<DEFNU>
 % Alias for 'moveto'
 moveto(obj,varargin{:})
 
+% ------------------------------------------------------------------------
 function cp = getcontrolpoint(obj)
 cp = getappdata(obj,CPTAG);
 assert( ~isempty(cp), ...
     'Control point has not been initialised. Use SETCONTROLPOINT to initialise.')
 
-
+% ------------------------------------------------------------------------
 function setcontrolpoint(obj,pt)
 setappdata(obj,CPTAG,pt)
 
-
+% ------------------------------------------------------------------------
 function tag = CPTAG
 tag = 'm_control_point';
