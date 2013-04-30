@@ -2,8 +2,8 @@ function draggable(hobj,varargin)
 %
 %
 %   draggable(h)
-%   draggable(h,'constrainto',hgobject)
-%
+%   draggable(h,'ConstrainTo',hgobject)
+%   draggable(h,'AllowRotate',true)
 %
 % NOTE:
 %   This function depends on the following:
@@ -14,6 +14,8 @@ function draggable(hobj,varargin)
 %
 %   TODO:   - Mouse cursors - rotate/pan for control points
 %           - Refactor
+%           - Handle right-clicks during left-click for rotation (as an
+%             alternative to shift)
 %           - Handle out-of-bounds rotations
 %           - cache functions
 %           - It seems that using the axis rotation tool drops all
@@ -55,8 +57,10 @@ setappdata(hgt,'draggable_object_data',object_data)
 set(hobj,'ButtonDownFcn',@button_down)
 
 
-% ------------------------------------------------------------------------
-% ------------------------------------------------------------------------
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                    Configuration
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 function hgt = configure(obj,opts)
 
 ax = ancestor(obj,'axes');
@@ -72,38 +76,12 @@ setappdata(obj,'transform_object',hgt)
 % Get options:
 constraint      = opts.constraint_type;
 constraint_data = opts.constraint_data;
-allow_rotate    = opts.allowrotate;
 
 % Object data:
 xo = get(obj,'XData'); xo = xo(:);
 yo = get(obj,'YData'); yo = yo(:);
 zo = get(obj,'ZData'); zo = zo(:);
 
-if allow_rotate
-    
-    % Build locations for control handles:
-    xyzo = [xo yo zo];
-    p0 = mean( xyzo, 1 );
-    
-    if numel(xo) == 4
-        % Use points on edges
-        cpoints = diff( [xyzo; xo(1) yo(1) zo(1)], 1)./2 + xyzo;
-    else
-        % Use vertices
-        cpoints = xyzo;
-    end
-    
-    % Add control handles as children of hgtransform
-    
-    props = {'Parent',hgt,'LineStyle','none','Marker','o','Color','k','MarkerFaceColor','c','MarkerSize',11};
-    
-    hrcp = plot3d(cpoints,props{:},'Tag','_RotateControl');    % 'Rotate' control points
-    htcp = plot3d(p0,props{:},'Tag','_TranslateControl');      % 'Translate' control points
-    
-    % Enable draggable on the controls:
-    set([hrcp,htcp],'ButtonDownFcn',@button_down)
-    
-end
 
 % Now configure the object's control point:
 switch lower(constraint)
@@ -146,23 +124,37 @@ switch lower(constraint)
 end %switch
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                    Callback functions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % ------------------------------------------------------------------------
 function button_down(obj,~)
-% Here OBJ could be the target object, or any one of its controls, all of
-% which are children of the hgtransform object.
+%BUTTON_DOWN Called when a mouse button is clicked on OBJ.
+%
+% The primary purpose of this function is to enable the
+% WindowButtonMotionFcn, which does all the hard work of translating or
+% rotating the object.
+%
+disp('button down!')
+% Get handles:
 fig = gcf;
 ax  = gca;
 hgt = ancestor(obj,'hgtransform');  % Should be immediate parent, but just in case
 
+% Initialise the stored version of 'CurrentPoint', held in hgt's appdata:
 cp = get(ax,'CurrentPoint');        % Initialize from axes
 set_stored_current_point(hgt,cp);   % Store
 
 % In some cases we need to know which data point in OBJ was selected on
 % buttondown, so find it:
-v = normalizeVector3d( diff( cp, 1 ) );              % View vector
-x = get(obj,'XData'); x = x(:);
-y = get(obj,'YData'); y = y(:);
-z = get(obj,'ZData'); z = z(:);
+v = normalizeVector3d( diff( cp, 1 ) );             % View vector
+x = get(obj,'XData'); x = x(:);                     %\
+y = get(obj,'YData'); y = y(:);                     % > All the object's data
+z = get(obj,'ZData'); z = z(:);                     %/
+
+% Find the index of the point closest to the line defined by
+% 'CurrentPoint':
 d = distancePointLine3d( [x y z], [cp(1,:) v] );
 [~,id] = min(d);
 
@@ -170,28 +162,30 @@ d = distancePointLine3d( [x y z], [cp(1,:) v] );
 setappdata(hgt,'SelectedObject',obj);
 setappdata(hgt,'SelectedPointIndex',id);
 
+% Set the interaction mode
+setappdata(fig,'draggable_InteractionMode','translate')
+
+% And also configure the keypress functions for changing mode (ie,
+% rotate/translate):
+set(fig,'KeyPressFcn',@key_down)
+
 % Finally configure the motion function & button up function:
 set(fig,'WindowButtonMotionFcn',{@motion_fcn,obj})
 set(fig,'WindowButtonUpFcn',{@button_up,obj})
 
-% Set the interaction mode
-setappdata(fig,'draggable_InteractionMode','translate')
-
-% And also configure the keypress functions for changing mode:
-% rotate/translate
-set(fig,'KeyPressFcn',@key_down)
-
 
 % ------------------------------------------------------------------------
 function button_up(fig,~,obj)
+%BUTTON_UP Called when a mouse button is release on OBJ
+% 
+% The primary purpose of this function is to disable the
+% WindowButtonMotionFcn, and restore figure properties that were
+% temporarily over-ridden for interaction
 
 % Re-set properties that we have temporarily overridden:
 initial = getappdata(fig,'draggable_initial_data');
 set(fig,'WindowButtonMotionFcn',initial.wbmf)
 set(fig,'WindowButtonUpFcn',initial.wbuf)
-
-hgt = ancestor(obj,'hgtransform');  % Should be immediate parent, but just in case
-objdata = getappdata(hgt,'draggable_object_data');
 
 % Remove the rotation/translation mode control callback (only KeyPressFcn -
 % KeyReleaseFcn is reset/removed at the end of its execution)
@@ -207,39 +201,26 @@ if isequal(krf,@key_up)
 end
 
 % Evaluate user's buttonupfcn:
+hgt = ancestor(obj,'hgtransform');  % Should be immediate parent, but just in case
+objdata = getappdata(hgt,'draggable_object_data');
 if isa(objdata.btnupfcn,'function_handle')
     feval(objdata.btnupfcn,obj)
 end
 
-% ------------------------------------------------------------------------
-function R = crosshair_rotation_matrix(ax,current_point,p0)
-
-[~,r] = spaceball(ax);
-
-% The mouse cursor intersects the sphere centered at p0 here:
-vhat = normalizeVector3d( diff( current_point, 1 ) );
-vline = [current_point(1,:) vhat];      % view line
-lsi = intersectLineSphere(vline, [p0 r]); %
-ps = lsi(1,:);       % Should be the first point, if not, use linePosition3d to find front point
-
-% Manipulation crosshairs are described by the intersection between
-% the sphere and the two orthogonal planes that run from the the point
-% ps through the sphere centre, p0
-v_s0 = normalizeVector3d( p0 - ps );    % vector back to centre
-
-R = vec_vec_rotationmatrix([1 0 0],v_s0);
-
 
 % ------------------------------------------------------------------------
 function motion_fcn(fig,~,obj)
-% OBJ is a handle to the graphics object we're manipulating.  It could
-% either be the primary object of interest, or one of the controls that are
-% built for manipulation.
+%MOTION_FCN Perform all the manipulation of OBJ on every mouse move event
+%
+% MOTION_FCN operates in interaction modes, 'rotate' or 'translate'.  This
+% mode determines how OBJ is manipulated.
 
-hgt = ancestor(obj,'hgtransform');
-ax = gca; %ancestor(hgt,'axes');
-
+% Get the interaction mode:
 interaction_mode = getappdata(fig,'draggable_InteractionMode');
+
+% Get handles:
+hgt = ancestor(obj,'hgtransform');
+ax = gca; 
 
 % Current cursor location
 current_point_new = get(ax,'CurrentPoint');
@@ -251,14 +232,19 @@ constraint_data = opts.constraint_data;
 allow_rotate = opts.allowrotate;
 
 
-
 if allow_rotate && isequal(interaction_mode,'rotate')
     
     % -------------- ROTATION -------------- %
+    
+    %  In this mode we have to not only rotate the object, but also rotate
+    %  the local coordinate indicators, as well as the manipulation
+    %  cross-hairs
+    
     % 1. Rotate the object
     % 2. Rotate the LCS indicators
     % 3. Rotate the manipulation cross-hairs
     
+    % 0. Calculate the rotation required since last update:
     p0 = manipulate(hgt,'getcontrolpoint');
     
     current_point_old  = get_stored_current_point(hgt);
@@ -268,11 +254,14 @@ if allow_rotate && isequal(interaction_mode,'rotate')
     
     dR = R_new/R_old;
     
+    % 1. Rotate the object    
     manipulate(hgt,'rotate',dR)
     
+    % 2. Rotate the local coordinate system:
     hgt_lcs = findobj(ax,'Tag','rotation_LCS_destroy');
     manipulate(hgt_lcs,'rotate',dR)
     
+    % 3. Rotate the manipulation cross-hairs:
     hgt_mxh = findobj(ax,'Tag','manipulation_crosshair_destroy');
     manipulate(hgt_mxh,'rotate',dR)
     
@@ -327,98 +316,6 @@ end
 % Update the stored current point
 set_stored_current_point(hgt,current_point_new)
 
-
-% ------------------------------------------------------------------------
-function update_manipulation_crosshairs(ax,R,T)
-
-% hgtransform tag:
-TAG = 'manipulation_crosshair_destroy';
-
-% Build transformation matrix:
-H = [R T(:); 0 0 0 1];
-
-% Check if hgtransform exists:
-hgt_mxh = findobj(ax,'Type','hgtransform','Tag',TAG);
-
-% Draw from scratch:
-if isempty( hgt_mxh )
-    
-    
-    [~,r] = spaceball(ax);
-    
-    theta = linspace(3*pi/2-pi/10,3*pi/2+pi/10,30);
-    
-    
-    x1 = r*sin(theta);
-    y1 = r*cos(theta);
-    z1 = zeros(size(x1));
-    
-    x2 = r*sin(theta);
-    y2 = zeros(size(x2));
-    z2 = r*cos(theta);
-    
-    H = eye(4);
-    H(1:3,1:3) = R;
-    H(1:3,4) = T(:);
-    
-    % Configure the hgtransform:
-    hgt_mxh = hgtransform('Parent',ax,'Matrix',H,'Tag',TAG);
-    manipulate(hgt_mxh,'setcontrolpoint',T);
-    
-    % Plot the two curves:
-    props = {'Color',[1 0.4 0],'Line','-','Parent',hgt_mxh};
-    plot3(x1,y1,z1,props{:})
-    plot3(x2,y2,z2,props{:})
-    
-else
-    
-    % Simple update:
-    
-    set(hgt_mxh,'Matrix',H)
-end
-
-% ------------------------------------------------------------------------
-function update_LCS_indicators(ax,R,T)
-
-% hgtransform tag:
-TAG = 'rotation_LCS_destroy';
-
-% Build transformation matrix:
-H = [R T(:); 0 0 0 1];
-
-% Check if hgtransform exists:
-hgt_lcs = findobj(ax,'Type','hgtransform','Tag',TAG);
-
-% Draw from scratch:
-if isempty( hgt_lcs )
-    
-    xhat = [1 0 0];
-    yhat = [0 1 0];
-    zhat = [0 0 1];
-    
-    [~,r] = spaceball(ax);
-    
-    l = r/4;
-    
-    % vector2crosshair anonymous function:
-    v2c = @(v) [-l*v; -l*v*.3; NaN NaN NaN; l*v*.3; l*v];
-    
-    % Configure the hgtransform:
-    hgt_lcs = hgtransform('Parent',ax,'Matrix',H,'tag',TAG);
-    manipulate(hgt_lcs,'setcontrolpoint',T)
-    
-    % Plot the three vectors:
-    props = {'Color',[1 0.4 0],'Line','-','Parent',hgt_lcs};
-    plot3d(ax,v2c(xhat),props{:});
-    plot3d(ax,v2c(yhat),props{:});
-    plot3d(ax,v2c(zhat),props{:});
-    
-else
-    % Simple update:
-    
-    set(hgt_lcs,'Matrix',H)
-    
-end
 
 % ------------------------------------------------------------------------
 function key_down(fig,k)
@@ -497,6 +394,45 @@ end
 
 
 % ------------------------------------------------------------------------
+function key_up(fig,k)
+% This funtion needs to be robust about destroying - items may or may not
+% exist
+if strcmpi(k.Key,'shift') && isempty(k.Character)
+    setappdata(fig,'draggable_InteractionMode','translate')   % Revert to default []
+    
+    % Destroy all stuffs
+    delete( findobj(fig,'-regexp','Tag','_destroy') )
+end
+
+% Automatically destroy / reset this callback:
+initial = getappdata(fig,'draggable_initial_data');
+set(fig,'KeyReleaseFcn',initial.krf)
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                    Helper functions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% ------------------------------------------------------------------------
+function R = crosshair_rotation_matrix(ax,current_point,p0)
+
+[~,r] = spaceball(ax);
+
+% The mouse cursor intersects the sphere centered at p0 here:
+vhat = normalizeVector3d( diff( current_point, 1 ) );
+vline = [current_point(1,:) vhat];      % view line
+lsi = intersectLineSphere(vline, [p0 r]); %
+ps = lsi(1,:);       % Should be the first point, if not, use linePosition3d to find front point
+
+% Manipulation crosshairs are described by the intersection between
+% the sphere and the two orthogonal planes that run from the the point
+% ps through the sphere centre, p0
+v_s0 = normalizeVector3d( p0 - ps );    % vector back to centre
+
+R = vec_vec_rotationmatrix([1 0 0],v_s0);
+
+
+% ------------------------------------------------------------------------
 function xyz = rotate_to_view_plane(xyzin, nml, ax)
 % Transform the data XYZIN with normal NML so that NML lines up with the
 % direction vector that the axes AX is being viewed from
@@ -511,6 +447,100 @@ R = vec_vec_rotationmatrix(v1,v2);
 
 % Rotate
 xyz = (R*xyzin')';
+
+
+% ------------------------------------------------------------------------
+function update_LCS_indicators(ax,R,T)
+
+% hgtransform tag:
+TAG = 'rotation_LCS_destroy';
+
+% Build transformation matrix:
+H = [R T(:); 0 0 0 1];
+
+% Check if hgtransform exists:
+hgt_lcs = findobj(ax,'Type','hgtransform','Tag',TAG);
+
+% Draw from scratch:
+if isempty( hgt_lcs )
+    
+    xhat = [1 0 0];
+    yhat = [0 1 0];
+    zhat = [0 0 1];
+    
+    [~,r] = spaceball(ax);
+    
+    l = r/4;
+    
+    % vector2crosshair anonymous function:
+    v2c = @(v) [-l*v; -l*v*.3; NaN NaN NaN; l*v*.3; l*v];
+    
+    % Configure the hgtransform:
+    hgt_lcs = hgtransform('Parent',ax,'Matrix',H,'tag',TAG);
+    manipulate(hgt_lcs,'setcontrolpoint',T)
+    
+    % Plot the three vectors:
+    props = {'Color',[1 0.4 0],'Line','-','Parent',hgt_lcs};
+    plot3d(ax,v2c(xhat),props{:});
+    plot3d(ax,v2c(yhat),props{:});
+    plot3d(ax,v2c(zhat),props{:});
+    
+else
+    % Simple update:
+    
+    set(hgt_lcs,'Matrix',H)
+    
+end
+
+
+% ------------------------------------------------------------------------
+function update_manipulation_crosshairs(ax,R,T)
+
+% hgtransform tag:
+TAG = 'manipulation_crosshair_destroy';
+
+% Build transformation matrix:
+H = [R T(:); 0 0 0 1];
+
+% Check if hgtransform exists:
+hgt_mxh = findobj(ax,'Type','hgtransform','Tag',TAG);
+
+% Draw from scratch:
+if isempty( hgt_mxh )
+    
+    
+    [~,r] = spaceball(ax);
+    
+    theta = linspace(3*pi/2-pi/10,3*pi/2+pi/10,30);
+    
+    
+    x1 = r*sin(theta);
+    y1 = r*cos(theta);
+    z1 = zeros(size(x1));
+    
+    x2 = r*sin(theta);
+    y2 = zeros(size(x2));
+    z2 = r*cos(theta);
+    
+    H = eye(4);
+    H(1:3,1:3) = R;
+    H(1:3,4) = T(:);
+    
+    % Configure the hgtransform:
+    hgt_mxh = hgtransform('Parent',ax,'Matrix',H,'Tag',TAG);
+    manipulate(hgt_mxh,'setcontrolpoint',T);
+    
+    % Plot the two curves:
+    props = {'Color',[1 0.4 0],'Line','-','Parent',hgt_mxh};
+    plot3(x1,y1,z1,props{:})
+    plot3(x2,y2,z2,props{:})
+    
+else
+    
+    % Simple update:
+    
+    set(hgt_mxh,'Matrix',H)
+end
 
 
 % ------------------------------------------------------------------------
@@ -540,42 +570,36 @@ p0 = mean( bounds );
 r = mean( diff(bounds./2) );    % Calculate a radius
 
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                    Utility functions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % ------------------------------------------------------------------------
-function key_up(fig,k)
-% This funtion needs to be robust about destroying - items may or may not
-% exist
-if strcmpi(k.Key,'shift') && isempty(k.Character)
-    setappdata(fig,'draggable_InteractionMode','translate')   % Revert to default []
-    
-    % Destroy all stuffs
-    delete( findobj(fig,'-regexp','Tag','_destroy') )
+function [objdata] = parse_inputs(varargin)
+% opt.constraint_type       [ {'none'} | 'hghandle' ]
+% opt.constraint_data       [  { [] }  | 'hghandle' ]
+% opt.allowrotate           [ {false} | true ]
+p = inputParser;
+addParamValue(p,'constrainto',[]);
+addParamValue(p,'allowrotate',false);
+addParamValue(p,'buttonupfcn',[]);
+addParamValue(p,'endfcn',[])
+parse(p,varargin{:})
+
+% Configure constraint
+objdata.constraint_type = 'none';
+objdata.constraint_data = p.Results.constrainto;
+if ~isempty(objdata.constraint_data)
+    if ishghandle(objdata.constraint_data)
+        objdata.constraint_type = 'hghandle';
+    end
 end
 
-% Automatically destroy / reset this callback:
-initial = getappdata(fig,'draggable_initial_data');
-set(fig,'KeyReleaseFcn',initial.krf)
-
-
-% ------------------------------------------------------------------------
-function cp_3d_coinc = constrained_displacement_line(current_point,curve_xyz)
-% SELECTED_POINT should be in the format of the 'CurrentPoint' axes
-% property
-%
-%
-p0 = current_point(1,:);
-nml = normalizeVector3d( diff(current_point) );
-
-plane = createPlane(p0,nml);
-
-crv_proj = projPointOnPlane(curve_xyz,plane); % Project onto plane
-crv_2d = planePosition(crv_proj,plane);     % Get planar (u,v) coordinates
-cp_2d  = planePosition(p0,plane);           % Just in case
-
-[~,~,cp_seg_id,cp_t] = nearest_point_on_polyline(cp_2d, crv_2d);
-
-% Now convert back into 3d location using curve parameters:
-pt_on_curve = @(xyz,seg,t) xyz(seg,:) + t*(xyz(seg+1,:) - xyz(seg,:));
-cp_3d_coinc = pt_on_curve(curve_xyz,cp_seg_id,cp_t);%curve_xyz(cp_seg_id,:) + cp_t*(curve_xyz(cp_seg_id+1,:) - curve_xyz(cp_seg_id,:));
+% Record other parameters:
+objdata.allowrotate = (p.Results.allowrotate == true) || any( strcmpi(p.Results.allowrotate,{'on','true'}) );
+objdata.btnupfcn    = p.Results.buttonupfcn;
+objdata.endfcn      = p.Results.endfcn;
 
 
 % ------------------------------------------------------------------------
@@ -609,33 +633,6 @@ end
 
 
 % ------------------------------------------------------------------------
-function [objdata] = parse_inputs(varargin)
-% opt.constraint_type       [ {'none'} | 'hghandle' ]
-% opt.constraint_data       [  { [] }  | 'hghandle' ]
-% opt.allowrotate           [ {false} | true ]
-p = inputParser;
-addParamValue(p,'constrainto',[]);
-addParamValue(p,'allowrotate',false);
-addParamValue(p,'buttonupfcn',[]);
-addParamValue(p,'endfcn',[])
-parse(p,varargin{:})
-
-% Configure constraint
-objdata.constraint_type = 'none';
-objdata.constraint_data = p.Results.constrainto;
-if ~isempty(objdata.constraint_data)
-    if ishghandle(objdata.constraint_data)
-        objdata.constraint_type = 'hghandle';
-    end
-end
-
-% Record other parameters:
-objdata.allowrotate = (p.Results.allowrotate == true) || any( strcmpi(p.Results.allowrotate,{'on','true'}) );
-objdata.btnupfcn    = p.Results.buttonupfcn;
-objdata.endfcn      = p.Results.endfcn;
-
-
-% ------------------------------------------------------------------------
 function pt = get_stored_current_point(hgt)
 pt = getappdata(hgt,'AxesCurrentPoint');
 
@@ -644,9 +641,32 @@ function set_stored_current_point(hgt,pt)
 assert( numel(pt) == 6 )
 setappdata(hgt,'AxesCurrentPoint',pt);
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                    Constraint functions
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+% ------------------------------------------------------------------------
+function cp_3d_coinc = constrained_displacement_line(current_point,curve_xyz)
+% SELECTED_POINT should be in the format of the 'CurrentPoint' axes
+% property
+%
+%
+p0 = current_point(1,:);
+nml = normalizeVector3d( diff(current_point) );
+
+plane = createPlane(p0,nml);
+
+crv_proj = projPointOnPlane(curve_xyz,plane); % Project onto plane
+crv_2d = planePosition(crv_proj,plane);     % Get planar (u,v) coordinates
+cp_2d  = planePosition(p0,plane);           % Just in case
+
+[~,~,cp_seg_id,cp_t] = nearest_point_on_polyline(cp_2d, crv_2d);
+
+% Now convert back into 3d location using curve parameters:
+pt_on_curve = @(xyz,seg,t) xyz(seg,:) + t*(xyz(seg+1,:) - xyz(seg,:));
+cp_3d_coinc = pt_on_curve(curve_xyz,cp_seg_id,cp_t);%curve_xyz(cp_seg_id,:) + cp_t*(curve_xyz(cp_seg_id+1,:) - curve_xyz(cp_seg_id,:));
 
 
 % ------------------------------------------------------------------------
@@ -669,10 +689,5 @@ end
 
 pointc = nearest_point_on_polyline(point, line_xyz);
 
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%                     Geometry functions
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
