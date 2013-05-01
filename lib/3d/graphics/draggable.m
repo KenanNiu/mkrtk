@@ -14,9 +14,10 @@ function draggable(hobj,varargin)
 %
 %   TODO:   - Mouse cursors - rotate/pan for control points
 %           - Refactor
+%               - appdata
 %           - Handle right-clicks during left-click for rotation (as an
 %             alternative to shift)
-%           - Handle out-of-bounds rotations
+%           - Out-of-bounds rotations should become 2d rotations
 %           - cache functions
 %           - It seems that using the axis rotation tool drops all
 %             draggable functionality.... why?
@@ -136,7 +137,7 @@ function button_down(obj,~)
 % WindowButtonMotionFcn, which does all the hard work of translating or
 % rotating the object.
 %
-disp('button down!')
+
 % Get handles:
 fig = gcf;
 ax  = gca;
@@ -162,8 +163,8 @@ d = distancePointLine3d( [x y z], [cp(1,:) v] );
 setappdata(hgt,'SelectedObject',obj);
 setappdata(hgt,'SelectedPointIndex',id);
 
-% Set the interaction mode
-setappdata(fig,'draggable_InteractionMode','translate')
+% Set the interaction mode & appropriate mouse cursor
+set_interaction_mode(fig,'translate')
 
 % And also configure the keypress functions for changing mode (ie,
 % rotate/translate):
@@ -181,6 +182,9 @@ function button_up(fig,~,obj)
 % The primary purpose of this function is to disable the
 % WindowButtonMotionFcn, and restore figure properties that were
 % temporarily over-ridden for interaction
+
+% Reset cursor:
+setpointer(fig,'arrow');
 
 % Re-set properties that we have temporarily overridden:
 initial = getappdata(fig,'draggable_initial_data');
@@ -216,7 +220,7 @@ function motion_fcn(fig,~,obj)
 % mode determines how OBJ is manipulated.
 
 % Get the interaction mode:
-interaction_mode = getappdata(fig,'draggable_InteractionMode');
+interaction_mode = get_interaction_mode(fig);
 
 % Get handles:
 hgt = ancestor(obj,'hgtransform');
@@ -338,9 +342,7 @@ if strcmpi(k.Key,'shift') && isempty(k.Character)
     
     % ---------- Configure ---------- %
     set(fig,'KeyReleaseFcn',@key_up)
-    
-    disp('rotate mode')
-    setappdata(fig,'draggable_InteractionMode','rotate')
+    set_interaction_mode(fig,'rotate')
     
     ax = gca;
     hgt = ancestor(gco,'hgtransform');  % Is there a better way to do this?
@@ -349,7 +351,7 @@ if strcmpi(k.Key,'shift') && isempty(k.Character)
     % ---------- Plot Spaceball bounds: ---------- %
     
     % Spaceball:
-    [~,r] = spaceball( ax );
+    r = spaceball( ax );
     
     % But in fact it is better to draw on the front of the bounding box, so
     % shift p0 toward the viewer along the view vector
@@ -395,18 +397,25 @@ end
 
 % ------------------------------------------------------------------------
 function key_up(fig,k)
-% This funtion needs to be robust about destroying - items may or may not
-% exist
+% This function is run on keyboard key up event, or called by button_up
 if strcmpi(k.Key,'shift') && isempty(k.Character)
-    setappdata(fig,'draggable_InteractionMode','translate')   % Revert to default []
     
-    % Destroy all stuffs
+    if numel(dbstack) == 1
+        % Called by key_up event directly
+        set_interaction_mode(fig,'translate')
+    else
+        % Called by button_up
+        set_interaction_mode(fig,'off')
+    end
+    
+    % Destroy all items tagged for destruction
     delete( findobj(fig,'-regexp','Tag','_destroy') )
-end
+    
+    % Automatically destroy / reset this key_up callback:
+    initial = getappdata(fig,'draggable_initial_data');
+    set(fig,'KeyReleaseFcn',initial.krf)
 
-% Automatically destroy / reset this callback:
-initial = getappdata(fig,'draggable_initial_data');
-set(fig,'KeyReleaseFcn',initial.krf)
+end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -416,13 +425,38 @@ set(fig,'KeyReleaseFcn',initial.krf)
 % ------------------------------------------------------------------------
 function R = crosshair_rotation_matrix(ax,current_point,p0)
 
-[~,r] = spaceball(ax);
+r = spaceball(ax);
+
+% Cursor line: line made by current_point
+A = current_point(1,:);
+B = current_point(2,:);
+vhat = normalizeVector3d( diff( current_point, 1 ) );
+cline = [current_point(1,:) vhat];      % cursor line
+
+% The cursor line should intersect the sphere; ie, d <= r
+d = distancePointLine3d(p0,cline);
+
+% If d > r, cline does not intersect the sphere.
+% Move cline so it is tangent to the sphere in order to ensure solution:
+if d > r
+    %X = A + dot( (ctr - A), B )*B
+    %%
+    rhat = normalizeVector3d( (A + linePosition3d(p0,cline)*vhat) - p0 );
+    cline(1:3) = p0 + ( rhat*r*(1-0.001) );
+
+    %%
+    %p0 = ctr + r*cross( vhat, normalizeVector3d( cross( B-A, ctr-A )) );
+    
+end
 
 % The mouse cursor intersects the sphere centered at p0 here:
-vhat = normalizeVector3d( diff( current_point, 1 ) );
-vline = [current_point(1,:) vhat];      % view line
-lsi = intersectLineSphere(vline, [p0 r]); %
+
+lsi = intersectLineSphere(cline, [p0 r]); %
 ps = lsi(1,:);       % Should be the first point, if not, use linePosition3d to find front point
+
+if all( isnan(ps) )
+    keyboard
+end
 
 % Manipulation crosshairs are described by the intersection between
 % the sphere and the two orthogonal planes that run from the the point
@@ -468,7 +502,7 @@ if isempty( hgt_lcs )
     yhat = [0 1 0];
     zhat = [0 0 1];
     
-    [~,r] = spaceball(ax);
+    r = spaceball(ax);
     
     l = r/4;
     
@@ -509,7 +543,7 @@ hgt_mxh = findobj(ax,'Type','hgtransform','Tag',TAG);
 if isempty( hgt_mxh )
     
     
-    [~,r] = spaceball(ax);
+    r = spaceball(ax);
     
     theta = linspace(3*pi/2-pi/10,3*pi/2+pi/10,30);
     
@@ -560,13 +594,13 @@ R = eye(3) + sin(angle)*axis_skewed + (1-cos(angle))*axis_skewed*axis_skewed;
 
 
 % ------------------------------------------------------------------------
-function [p0, r] = spaceball( ax )
+function [r] = spaceball( ax )
 % Create location & radius for space manipulation sphere
 
 bounds = reshape(axis(ax), 2, []);
 
 % Bounding circle, with centre
-p0 = mean( bounds );
+%p0 = mean( bounds );
 r = mean( diff(bounds./2) );    % Calculate a radius
 
 
@@ -633,6 +667,94 @@ end
 
 
 % ------------------------------------------------------------------------
+function curs = getpointer(fig)
+%GETPOINTER Complimentary function to SETPOINTER
+if isappdata(fig,'Pointer')
+    curs = getappdata(fig,'Pointer');
+else
+    curs = get(fig,'Pointer');
+end
+
+% ------------------------------------------------------------------------
+function setpointer(fig,curs,cdata,hotspot)
+%SETPOINTER Set the figure pointer
+%
+% We have this function for two reasons, namely
+%   1. Mac doen't natively support the 'fleur' pointer
+%   2. To record the name of custom pointers provided by setptr
+%
+% Usage:
+%   setpointer(fig,cursor_name)             % cursor_name can be anything handled
+%                                           % natively, or provided by setptr
+%
+%   setpointer(fig,'custom',cdata)          % set custom cursor
+%   setpointer(fig,'custom',cdata,hotspot)  % set custom cursor with hotspot
+%
+% Examples:
+%   setpointer(fig,'fleur')
+%
+%   setpointer(fig,'eraser')
+%   getpointer(fig)
+%       ans = 
+%           'eraser'
+%
+%   setpointer(fig,'custom',rand(16),[8 8])
+
+% In this function, the follow definitions apply:
+%   POINTER - name that we will store in appdata
+%   CURS    - name that will be passed to set() or setptr()
+
+if ismac && strcmpi(curs,'fleur') % special case
+    pointer = curs;         
+    curs = 'custom';        
+    cdata = fleurcursor();
+    hotspot = [8 8];
+    % setappdata(fig,'Pointer',pointer)
+    % set(fig,'Pointer',curs,'PointerShapeCData',cdata,'PointerShapeHotSpot',hotspot)   
+else
+    
+    if strcmpi(curs,'custom')
+        % setpointer(fig,'custom',cdata,[hotspot])
+        pointer = curs;
+        if ~exist('hotspot','var')
+            hotspot = get(fig,'PointerShapeHotSpot');
+        end
+        % setappdata(fig,'Pointer',pointer)
+        % set(fig,'Pointer',curs,'PointerShapeCData',cdata,'PointerShapeHotSpot',hotspot)
+    else
+        % setpointer(fig, cursor_name)
+        std = ['crosshair', 'fullcrosshair', 'arrow', 'ibeam', 'watch', 'topl',...
+            'topr', 'botl', 'botr', 'left', 'top', 'right', 'bottom', 'circle',...
+            'cross', 'fleur', 'custom', 'hand'];
+    
+        if any( strcmpi(curs,std) )
+            % curs is a standard name:
+            % set(fig,'Pointer',curs)
+        else
+            % curs is a setptr pre-defined custom name
+            pointer = curs;
+            % setappdata(fig,'Pointer',pointer)
+            % setptr(fig,curs)
+    
+        end
+    
+    end
+end
+
+% Finally set the cursor
+if strcmpi(curs,'custom')
+    % manual set
+    set(fig,'Pointer',curs,'PointerShapeCData',cdata,'PointerShapeHotSpot',hotspot)
+else
+    % use setptr for standard and standard special names:
+    setptr(fig,curs)
+end
+
+% Record the pointer name:
+setappdata(fig,'Pointer',pointer)
+
+
+% ------------------------------------------------------------------------
 function pt = get_stored_current_point(hgt)
 pt = getappdata(hgt,'AxesCurrentPoint');
 
@@ -641,6 +763,32 @@ function set_stored_current_point(hgt,pt)
 assert( numel(pt) == 6 )
 setappdata(hgt,'AxesCurrentPoint',pt);
 
+
+% ------------------------------------------------------------------------
+function mode = get_interaction_mode(fig)
+%GET_INTERACTION_MODE Complimentary function for SET_INTERACTION_MODE
+TAG = 'draggable_InteractionMode';
+mode = getappdata(fig,TAG);
+
+% ------------------------------------------------------------------------
+function set_interaction_mode(fig,mode)
+%SET_INTERACTION_MODE For setting the interaction mode of the figure
+TAG = 'draggable_InteractionMode';
+switch mode
+    case 'off'
+        if isappdata(fig,TAG)
+            rmappdata(fig,TAG)
+        end
+    case 'rotate'
+        setappdata(fig,TAG,'rotate')
+        setpointer(fig,'rotate')
+    case 'translate'
+        setappdata(fig,TAG,'translate')
+        setpointer(fig,'fleur')
+    otherwise
+        error('unhandled interaction mode')
+        
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                    Constraint functions
@@ -690,4 +838,28 @@ end
 pointc = nearest_point_on_polyline(point, line_xyz);
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                    Data
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% ------------------------------------------------------------------------
+function C = fleurcursor
+
+C = [...
+ NaN NaN NaN NaN NaN NaN   2   1   2 NaN NaN NaN NaN NaN NaN NaN
+ NaN NaN NaN NaN NaN   2   1   1   1   2 NaN NaN NaN NaN NaN NaN
+ NaN NaN NaN NaN   2   1   1   1   1   1   2 NaN NaN NaN NaN NaN
+ NaN NaN NaN   2   2   2   2   1   2   2   2   2 NaN NaN NaN NaN
+ NaN NaN   2   2 NaN NaN   2   1   2 NaN NaN   2   2 NaN NaN NaN
+ NaN   2   1   2 NaN NaN   2   1   2 NaN NaN   2   1   2 NaN NaN
+   2   1   1   2   2   2   2   1   2 NaN NaN   2   1   1   2 NaN
+   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   2
+   2   1   1   2   2   2   2   1   2   2   2   2   1   1   2 NaN
+ NaN   2   1   2 NaN NaN   2   1   2 NaN NaN   2   1   2 NaN NaN
+ NaN NaN   2   2 NaN NaN   2   1   2 NaN NaN   2   2 NaN NaN NaN
+ NaN NaN NaN   2   2   2   2   1   2   2   2   2 NaN NaN NaN NaN
+ NaN NaN NaN NaN   2   1   1   1   1   1   2 NaN NaN NaN NaN NaN
+ NaN NaN NaN NaN NaN   2   1   1   1   2 NaN NaN NaN NaN NaN NaN
+ NaN NaN NaN NaN NaN NaN   2   1   2 NaN NaN NaN NaN NaN NaN NaN
+ NaN NaN NaN NaN NaN NaN NaN   2 NaN NaN NaN NaN NaN NaN NaN NaN];
 
