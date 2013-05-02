@@ -263,12 +263,11 @@ if allow_rotate && isequal(interaction_mode,'rotate')
     manipulate(hgt,'rotate',dR)
     
     % 2. Rotate the local coordinate system:
-    hgt_lcs = findobj(ax,'Tag','rotation_LCS_destroy');
-    manipulate(hgt_lcs,'rotate',dR)
+    p0_front = move_to_front(ax,p0);
+    update_LCS_indicators(ax,R_new,p0_front)
     
     % 3. Rotate the manipulation cross-hairs:
-    hgt_mxh = findobj(ax,'Tag','manipulation_crosshair_destroy');
-    manipulate(hgt_mxh,'rotate',dR)
+    update_manipulation_crosshairs(ax,R_new,p0_front)
     
     
 else
@@ -352,11 +351,11 @@ if strcmpi(k.Key,'shift') && isempty(k.Character)
     % Spaceball:
     r = spaceball( ax );
     
-    % But in fact it is better to draw on the front of the bounding box, so
+    % It is better to draw on the front of the bounding box, so
     % shift p0 toward the viewer along the view vector
     current_point = get(ax,'CurrentPoint');
-    p0_front = p0 - diff( current_point, 1 )./2;
-    
+    p0_front = move_to_front(ax,p0);
+        
     % Create circle in (x,y) plane
     n = 100;
     tc = linspace(0,2*pi,n)';
@@ -385,10 +384,9 @@ if strcmpi(k.Key,'shift') && isempty(k.Character)
     
     % ---------- Now plot manipulation crosshairs ---------- %
     
-    R = crosshair_rotation_matrix(ax,current_point,p0);
+    R = crosshair_rotation_matrix(r,current_point,p0);
     
     update_manipulation_crosshairs(ax,R,p0_front)
-    
     
     
 end
@@ -437,7 +435,7 @@ d = distancePointLine3d(p0,cline);
 % Move cline so it is tangent to the sphere in order to ensure solution:
 if d > radius
     rhat = normalizeVector3d( (A + linePosition3d(p0,cline)*vhat) - p0 );
-    cline(1:3) = p0 + ( rhat*radius*(1-0.001) );
+    cline(1:3) = p0 + ( rhat*radius*(1-eps) ); % -eps ensures we're never outside
 end
 
 % The mouse cursor intersects the sphere centered at p0 here:
@@ -450,6 +448,15 @@ ps = lsi(1,:);       % Should be the first point, if not, use linePosition3d to 
 v_s0 = normalizeVector3d( p0 - ps );    % vector back to centre
 
 R = vec_vec_rotationmatrix([1 0 0],v_s0);
+
+
+% ------------------------------------------------------------------------
+function p_front = move_to_front(ax,point)
+% For drawing manipulation controls in front of everything else.  perhaps
+% not the best solution, an implementation is not formally correct, but
+% it'll do for now... 
+current_point = get(ax,'CurrentPoint');
+p_front = point - diff( current_point, 1 )./2;
 
 
 % ------------------------------------------------------------------------
@@ -556,7 +563,6 @@ if isempty( hgt_mxh )
     plot3(x2,y2,z2,props{:})
     
 else
-    
     % Simple update:
     
     set(hgt_mxh,'Matrix',H)
