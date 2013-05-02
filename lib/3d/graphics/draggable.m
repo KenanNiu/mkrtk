@@ -226,7 +226,8 @@ interaction_mode = get_interaction_mode(fig);
 hgt = ancestor(obj,'hgtransform');
 ax = gca; 
 
-% Current cursor location
+% Current cursor locations, old & new
+current_point_old  = get_stored_current_point(hgt);    % Current axes point, 2-by-3
 current_point_new = get(ax,'CurrentPoint');
 
 % Object data & options:
@@ -250,11 +251,11 @@ if allow_rotate && isequal(interaction_mode,'rotate')
     
     % 0. Calculate the rotation required since last update:
     p0 = manipulate(hgt,'getcontrolpoint');
+        
+    r = spaceball(ax);
     
-    current_point_old  = get_stored_current_point(hgt);
-    
-    R_old = crosshair_rotation_matrix(ax,current_point_old,p0);
-    R_new = crosshair_rotation_matrix(ax,current_point_new,p0);
+    R_old = crosshair_rotation_matrix(r,current_point_old,p0);
+    R_new = crosshair_rotation_matrix(r,current_point_new,p0);
     
     dR = R_new/R_old;
     
@@ -279,8 +280,6 @@ else
         case 'none'
             % Free movement:
             
-            % Last recorded cursor location
-            current_point_old  = get_stored_current_point(hgt);    % Current axes point, 2-by-3
             
             % Find displacement:
             dp = mean( current_point_new - current_point_old, 1 );
@@ -423,40 +422,27 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % ------------------------------------------------------------------------
-function R = crosshair_rotation_matrix(ax,current_point,p0)
-
-r = spaceball(ax);
+function R = crosshair_rotation_matrix(radius,current_point,p0)
 
 % Cursor line: line made by current_point
 A = current_point(1,:);
 B = current_point(2,:);
-vhat = normalizeVector3d( diff( current_point, 1 ) );
-cline = [current_point(1,:) vhat];      % cursor line
+vhat = normalizeVector3d( B-A );
+cline = [A vhat];      % cursor line
 
 % The cursor line should intersect the sphere; ie, d <= r
 d = distancePointLine3d(p0,cline);
 
 % If d > r, cline does not intersect the sphere.
 % Move cline so it is tangent to the sphere in order to ensure solution:
-if d > r
-    %X = A + dot( (ctr - A), B )*B
-    %%
+if d > radius
     rhat = normalizeVector3d( (A + linePosition3d(p0,cline)*vhat) - p0 );
-    cline(1:3) = p0 + ( rhat*r*(1-0.001) );
-
-    %%
-    %p0 = ctr + r*cross( vhat, normalizeVector3d( cross( B-A, ctr-A )) );
-    
+    cline(1:3) = p0 + ( rhat*radius*(1-0.001) );
 end
 
 % The mouse cursor intersects the sphere centered at p0 here:
-
-lsi = intersectLineSphere(cline, [p0 r]); %
+lsi = intersectLineSphere(cline, [p0 radius]); %
 ps = lsi(1,:);       % Should be the first point, if not, use linePosition3d to find front point
-
-if all( isnan(ps) )
-    keyboard
-end
 
 % Manipulation crosshairs are described by the intersection between
 % the sphere and the two orthogonal planes that run from the the point
@@ -709,8 +695,6 @@ if ismac && strcmpi(curs,'fleur') % special case
     curs = 'custom';        
     cdata = fleurcursor();
     hotspot = [8 8];
-    % setappdata(fig,'Pointer',pointer)
-    % set(fig,'Pointer',curs,'PointerShapeCData',cdata,'PointerShapeHotSpot',hotspot)   
 else
     
     if strcmpi(curs,'custom')
@@ -719,23 +703,15 @@ else
         if ~exist('hotspot','var')
             hotspot = get(fig,'PointerShapeHotSpot');
         end
-        % setappdata(fig,'Pointer',pointer)
-        % set(fig,'Pointer',curs,'PointerShapeCData',cdata,'PointerShapeHotSpot',hotspot)
     else
         % setpointer(fig, cursor_name)
         std = ['crosshair', 'fullcrosshair', 'arrow', 'ibeam', 'watch', 'topl',...
             'topr', 'botl', 'botr', 'left', 'top', 'right', 'bottom', 'circle',...
             'cross', 'fleur', 'custom', 'hand'];
     
-        if any( strcmpi(curs,std) )
-            % curs is a standard name:
-            % set(fig,'Pointer',curs)
-        else
+        if ~any( strcmpi(curs,std) )
             % curs is a setptr pre-defined custom name
             pointer = curs;
-            % setappdata(fig,'Pointer',pointer)
-            % setptr(fig,curs)
-    
         end
     
     end
