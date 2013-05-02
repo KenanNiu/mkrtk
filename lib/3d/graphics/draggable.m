@@ -89,7 +89,7 @@ switch lower(constraint)
     
     case 'none'
         % Set the control point
-        cp = mean( [xo, yo, zo], 1);
+        cp = mean( [xo, yo, zo], 1 );
         manipulate(hgt,'setcontrolpoint',cp)
         
     case 'hghandle'
@@ -254,10 +254,34 @@ if allow_rotate && isequal(interaction_mode,'rotate')
         
     r = spaceball(ax);
     
-    R_old = crosshair_rotation_matrix(r,current_point_old,p0);
-    R_new = crosshair_rotation_matrix(r,current_point_new,p0);
+    [R_old,OOB_old] = crosshair_rotation_matrix(r,current_point_old,p0);
+    [R_new,OOB_new] = crosshair_rotation_matrix(r,current_point_new,p0);
     
     dR = R_new/R_old;
+    
+    % Check for the in-plane rotation case when the cursor is outside the
+    % bounds of the manipulation sphere;
+    if OOB_old && OOB_new
+        % Re-hash - we need to calculate an axial rotation around a vector
+        % centred at p0 and in the direction of the current_point vectors.
+        % We use only the component of the rotation in dR which occurs
+        % about the axis aligned with current_point.
+        
+        % View axis:
+        axs = normalizeVector3d( diff( current_point_new, 1 ) );
+        
+        [dRaxs,dRang] = rotmat2axisangle(dR);
+        ang = dRang * dot(dRaxs,axs);
+        H = makehgtform('axisrotate',axs,ang);
+        dR = H(1:3,1:3);
+        R_new = dR*R_old;
+        
+    else
+        % Calculate simple change:
+        dR = R_new/R_old;
+        
+    end
+       
     
     % 1. Rotate the object    
     manipulate(hgt,'rotate',dR)
@@ -335,15 +359,19 @@ function key_down(fig,k)
 %
 %       Button Release
 %           '--> destroy KeyReleaseFcn
-%
-if strcmpi(k.Key,'shift') && isempty(k.Character)
+
+hgt = ancestor(gco,'hgtransform');  
+opts = getappdata(hgt,'draggable_object_data');
+allow_rotate = opts.allowrotate;
+
+if allow_rotate && strcmpi(k.Key,'shift') && isempty(k.Character)
     
     % ---------- Configure ---------- %
     set(fig,'KeyReleaseFcn',@key_up)
     set_interaction_mode(fig,'rotate')
     
     ax = gca;
-    hgt = ancestor(gco,'hgtransform');  % Is there a better way to do this?
+    
     p0 = manipulate(hgt,'getcontrolpoint');
     
     % ---------- Plot Spaceball bounds: ---------- %
@@ -420,7 +448,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % ------------------------------------------------------------------------
-function R = crosshair_rotation_matrix(radius,current_point,p0)
+function [R,OOB] = crosshair_rotation_matrix(radius,current_point,p0)
 
 % Cursor line: line made by current_point
 A = current_point(1,:);
@@ -431,23 +459,28 @@ cline = [A vhat];      % cursor line
 % The cursor line should intersect the sphere; ie, d <= r
 d = distancePointLine3d(p0,cline);
 
+% Check out of bounds:
+OOB = d > radius;
 % If d > r, cline does not intersect the sphere.
-% Move cline so it is tangent to the sphere in order to ensure solution:
-if d > radius
+if OOB    
+    % Move cline so it is tangent to the sphere in order to ensure solution:
+    tol = 1e-10;
     rhat = normalizeVector3d( (A + linePosition3d(p0,cline)*vhat) - p0 );
-    cline(1:3) = p0 + ( rhat*radius*(1-eps) ); % -eps ensures we're never outside
+    cline(1:3) = p0 + ( rhat*(radius-tol) ); % -eps ensures we're never outside
 end
 
-% The mouse cursor intersects the sphere centered at p0 here:
+% The sphere centered at p0 is pierced by the mouse cursor here:
 lsi = intersectLineSphere(cline, [p0 radius]); %
 ps = lsi(1,:);       % Should be the first point, if not, use linePosition3d to find front point
 
 % Manipulation crosshairs are described by the intersection between
 % the sphere and the two orthogonal planes that run from the the point
 % ps through the sphere centre, p0
-v_s0 = normalizeVector3d( p0 - ps );    % vector back to centre
+v_s0 = normalizeVector3d( p0 - ps );        % vector back to centre
+R1 = vec_vec_rotationmatrix([1 0 0],vhat);  % crosshairs defined with x-basis; rotate to view line
+R2 = vec_vec_rotationmatrix(vhat,v_s0);     % Rotate from view line to current line through sphere
+R = R2*R1;
 
-R = vec_vec_rotationmatrix([1 0 0],v_s0);
 
 
 % ------------------------------------------------------------------------
@@ -474,6 +507,25 @@ R = vec_vec_rotationmatrix(v1,v2);
 
 % Rotate
 xyz = (R*xyzin')';
+
+
+% ------------------------------------------------------------------------
+function [axs,ang] = rotmat2axisangle(R)
+%ROTMAT2AXISANGLE Convert rotation matrix to axis / angle representation
+%
+% This function does the same job as vrrotmat2vec if you have simulink
+% installed.  However, this function does not cater for the ambiguity when
+% angle = pi, since we expect only small rotations to be passed in for this
+% application.
+tol = 1e-12;
+mtc = trace(R);
+if ( abs( mtc - 3 ) <= tol )
+    axs = [1 0 0];
+    ang = 0;
+else
+    ang = acos( (mtc - 1) / 2 );
+    axs = [R(3,2)-R(2,3) R(1,3)-R(3,1) R(2,1)-R(1,2)] ./ (2*sin(ang)); 
+end
 
 
 % ------------------------------------------------------------------------
@@ -845,3 +897,4 @@ C = [...
  NaN NaN NaN NaN NaN NaN   2   1   2 NaN NaN NaN NaN NaN NaN NaN
  NaN NaN NaN NaN NaN NaN NaN   2 NaN NaN NaN NaN NaN NaN NaN NaN];
 
+C( C==2 ) = NaN;
