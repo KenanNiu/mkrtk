@@ -12,16 +12,23 @@ function draggable(hobj,varargin)
 %       - GEOM3D toolbox (FEX)
 %       - and probably others...
 %
-%   TODO:   - Mouse cursors - rotate/pan for control points
+%   TODO:   - Constraint stuff is a little under developed (or over-developed?)
 %           - Refactor
 %               - appdata
 %           - Handle right-clicks during left-click for rotation (as an
 %             alternative to shift)
-%           - Out-of-bounds rotations should become 2d rotations
 %           - cache functions
 %           - It seems that using the axis rotation tool drops all
 %             draggable functionality.... why?
 %           - Create a shunt for different calling options
+%               - 'off' case
+%
+% 
+% NOTE:
+%   For cases using the 'ConstrainTo' option, it is a good idea to set the
+%   'HitTest' of the constraint object to 'off' to prevent it from
+%   capturing clicks.
+%
 
 
 % Handle vector inputs:
@@ -97,16 +104,25 @@ switch lower(constraint)
         xc = get(hc,'XData');
         yc = get(hc,'YData');
         zc = get(hc,'ZData');
-        switch get(hc,'type')
+        
+        switch get(hc,'Type')
             
-            case 'line'
-                assert( isequal( get(obj,'type'), 'line'), 'hgobject type not supported')
+            case 'line'     % Constraint is a line object
                 
-                % OBJ is a line, and we're constraining it to HC which is
-                % also a line.
-                
-                % Find nearest passing points:
-                [pc,po] = polylines_nearest_passing_points([xc(:) yc(:) zc(:)],[xo yo zo]);
+                switch get(obj,'Type')
+                    
+                    case 'line'                 % Constraint==line, object==line
+                        % Nearest points on object & constratin:
+                        [pc,po] = polylines_nearest_passing_points([xc(:) yc(:) zc(:)],[xo yo zo]);
+                        
+                    case {'patch','surface'}    % Constraint==line, object==[ patch | surface ]
+                        po = mean( [xo yo zo], 1 );                             % point on object
+                        pc = nearest_point_on_polyline(po,[xc(:) yc(:) zc(:)]); % point on constraint 
+                        
+                    otherwise
+                        error('Unhandled graphics object to constrain: %s',get(obj,'Type'))
+                end
+                % ---- Snap to line: ----
                 
                 % Set the control point on the object:
                 manipulate(hgt,'setcontrolpoint',po)
@@ -114,15 +130,18 @@ switch lower(constraint)
                 % Move object to the point on the constraining object:
                 manipulate(hgt,'moveto',pc)
                 
+                % ----               ----
                 
             otherwise
-                error('unhandled hg type')
-        end
+                error('Unhandled hg constraint type: %s',get(hc,'Type'))
+            
+        end %switch constraint hghandle type 
         
+                
     otherwise
-        error('unhandled constraint type')
+        error('Unhandled constraint type: %s',constraint)
         
-end %switch
+end %switch constraint type
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -293,6 +312,7 @@ if allow_rotate && isequal(interaction_mode,'rotate')
     % 3. Rotate the manipulation cross-hairs:
     update_manipulation_crosshairs(ax,R_new,p0_front)
     
+    % -------------- ROTATION -------------- %
     
 else
     
@@ -324,19 +344,24 @@ else
                     
                     manipulate(hgt,'moveto',control_point_new)
                     
+                    %case {'linesegment','line_segment'}
+                    % Constrained by list of 2D or 3D points which define a
+                    % line, but are not plotted
                     
                 otherwise
-                    error('unhandled graphics object type')
+                    error('Unhandled graphics object type for constraint: %s', constraint)
+                    
             end
             
-            %case {'linesegment','line_segment'}
-            % Constrained by list of 2D or 3D points which define a line
+            
             
             
         otherwise
             error('unhandled constraint')
             
     end
+    % -------------- TRANSLATION -------------- %
+    
     
 end
 % Update the stored current point

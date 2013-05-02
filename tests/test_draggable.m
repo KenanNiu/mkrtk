@@ -1,4 +1,5 @@
 function test_draggable
+close all
 
 w = 10;
 
@@ -6,6 +7,7 @@ w = 10;
 
 figure
 curve = plot3(mpath.x,mpath.y,mpath.z+2,'.-');
+set(curve,'HitTest','off');
 axis equal
 grid on
 hold on
@@ -23,13 +25,16 @@ point = plot3(pt.x,pt.y,pt.z,'Marker','o','MarkerFaceColor','g','MarkerSize',12)
 
 line = plot3(ln.x,ln.y,ln.z,'Marker','*','Linestyle','-','Color','r');
 
-axis tight
+
 %draggable(point)
-%draggable(point,'ConstrainTo',curve)
-draggable(point,'ConstrainTo',curve,'ButtonUpFcn',@my_button_up_fcn)
+draggable(point,'ConstrainTo',curve)
+%draggable(point,'ConstrainTo',curve,'ButtonUpFcn',@my_button_up_fcn)
 %draggable(point,'ConstrainTo',curve,'EndFcn',@()my_end_fcn(gca))
 
-draggable(line)%,'ConstrainTo',curve)
+%draggable(line)
+%draggable(line,'ConstrainTo',curve)
+%draggable(line,'AllowRotate',true)
+draggable(line,'ConstrainTo',curve,'AllowRotate',true)
 
 axis auto
 axis tight
@@ -41,8 +46,10 @@ nml = [1 0 0];
 p = createPlane(p0,nml);
 
 hp = drawPlane3d(p);
+set(hp,'FaceColor',[0.5 0.5 0.5])
 
-draggable(hp,'AllowRotate',1)
+%draggable(hp,'AllowRotate',true)
+draggable(hp,'AllowRotate',true,'ConstrainTo',curve)
 
 %keyboard
 
