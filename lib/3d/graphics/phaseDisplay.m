@@ -133,10 +133,6 @@ if ~isempty(handles.LineOfAction)
     for j = 1:numel(handles.LineOfAction)
         lj = handles.LineOfAction(j);
         if lj.Visible && isfield(lj,'Point') && isfield(lj,'Vector')
-            
-            c2id = strcmp({handles.Models.Tag},handles.HelicalAxis(j).Item2);
-            %hclr = clrs(c2id,:);
-            
             % Draw it as the same as the helical axis
             plotHelical(ha, lj.Vector(p,:), lj.Point(p,:), 'Color', 'c', qprops{:})
         end
