@@ -298,7 +298,7 @@ function MI_Kinematics_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-launch_Analysis_gui(handles)
+Analysis3DGui();
 
 
 % ------------------------------------------------------------------------
@@ -799,45 +799,6 @@ xlims = [min(Xlims(:,1)) max(Xlims(:,2))];
 ylims = [min(Ylims(:,1)) max(Ylims(:,2))];
 zlims = [min(Zlims(:,1)) max(Zlims(:,2))];
 
-% ------------------------------------------------------------------------
-function launch_Analysis_gui(handles)
-% Function to launch the analysis interface
-
-mtags = {handles.Models.Tag};
-
-% For helical axis definitions, use only models that have both static and
-% dynamic clouds:
-sok = ~cellfun(@isempty,{handles.Models.HiRes});
-dok = ~cellfun(@isempty,{handles.Models.LoRes});
-ok = sok & dok;
-haxCandTags = mtags(ok);
-
-% % Ensure we have some:
-% if isempty(mtags)
-%     msg = {'There are no models between which helical axes can be defined.';
-%         '';
-%         ['Make sure you have some models loaded, and that they have both ',...
-%         'static and dynamic clouds, then try again.']};
-%     warndlg(msg,'Unable to define helical axes','modal')
-%     return
-% end  
-
-% For line of action definitions, we could use only models that have only
-% dynamic clouds, but let's just populate with all for now:
-loaCandTags = mtags;
-
-% Launch the GUI, with error protection:
-hf = Analysis3DGui(haxCandTags, loaCandTags,...
-    handles.HelicalAxis,...
-    handles.LineOfAction,...
-    handles.MomentArm);
-%set(hf,'WindowStyle','modal');  % Optional
-
-% Add listener - When window closes, the HitTest property of ModelLoader
-% gets turned off, which triggers this listener which does all the data &
-% graphics updates for the loading of models.
-addlistener(hf,'HitTest','PreSet',@analysisUpdater);
-
 
 % ------------------------------------------------------------------------
 function launch_Solver_gui(handles)
@@ -1020,69 +981,4 @@ for j = 1:numel(haxes)
     end
 end
 
-
-% ------------------------------------------------------------------------
-function analysisUpdater(~,event) 
-%ANALYSISUPDATER Listener callback for getting output from Analysis3DGui
-%
-% This function is a listener callback which gets invoked during the window
-% closing process of ANALYSIS3DGUI.  The listener needs to be added by any
-% function which invokes ANALYSIS3DGUI and this function gets the output of
-% that GUI and saves/updates all the info in the handles of Registration (on
-% successful close)
-
-% Get handles of main GUI & output from closing GUI
-[handles,data] = getGuiOutput(event);
-
-% Check output:
-if numel(data)==1 && ishandle(data)
-    % Figure closed without "OK"
-    % Do nothing
-    return
-end
-
-[hax,loa,marm] = data{:};
-
-% As far as outputs go here, if they have their state variables calculated,
-% we can skip them, if not, then we need to recalculate them:
-hax_update = cellfun(@isempty,{hax.Axis});
-loa_update = cellfun(@isempty,{loa.Point});
-marm_update= cellfun(@isempty,{marm.Point1});
-
-% If we have work to do, give some feedback:
-if any( [hax_update loa_update marm_update] )
-    hl = FigLocker.Lock(handles.figure1);
-    hl.setprogress(inf)
-end
-
-if any(hax_update)
-    hl.settext('Updating helical axes')
-    hax(hax_update) = calcHelicalAxes(hax(hax_update),handles.Models);
-end
-
-if any(loa_update)
-    hl.settext('Updating lines of action')
-    loa(loa_update) = calcLinesOfAction(loa(loa_update),handles.Models);
-end
-
-if any(marm_update)
-    hl.settext('Updating moment arms')
-    marm(marm_update) = calcMomentArms(marm(marm_update),hax,loa);
-end
-
-% Unlock figure:
-if exist('hl','var') == 1
-    hl.unlock
-end
-
-
-% Update output variables:
-handles.HelicalAxis = hax;
-handles.LineOfAction = loa;
-handles.MomentArm = marm;
-
-% Update guidata
-guidata(handles.figure1,handles)
-
-phaseDisplay(handles);
 

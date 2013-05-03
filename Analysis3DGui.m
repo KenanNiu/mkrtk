@@ -45,7 +45,7 @@ end
 
 
 % --- Executes just before Analysis3DGui is made visible.
-function Analysis3DGui_OpeningFcn(hObject, eventdata, handles, varargin)
+function Analysis3DGui_OpeningFcn(hObject, eventdata, handles, varargin) %#ok<*INUSL>
 % This function has no output args, see OutputFcn.
 % hObject    handle to figure
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -53,46 +53,51 @@ function Analysis3DGui_OpeningFcn(hObject, eventdata, handles, varargin)
 % varargin   command line arguments to Analysis3DGui (see VARARGIN)
 
 % Choose default command line output for Analysis3DGui
-handles.output = hObject;
+handles.output = hObject; 
+guidata(hObject, handles);  % Just quickly, for fall-out cases
 
-% Bail out (but show figure) if inputs are incorrect:
-if numel(varargin) == 0
-    delete(handles.figure1)
-    error([upper(mfilename) ' must be called with inputs.']);
+% Button graphics:
+load('icons.mat');
+set(handles.NewHaxButton,'CData',icons.rightarrow)
+set(handles.DelHaxButton,'CData',icons.delete_grey)
+set(handles.NewLoaButton,'CData',icons.rightarrow)
+set(handles.DelLoaButton,'CData',icons.delete_grey)
+set(handles.NewMarmButton,'CData',icons.rightarrow)
+set(handles.DelMarmButton,'CData',icons.delete_grey)
+
+% Get handles data from main program:
+mainh = mainguidata();
+if isempty(mainh)
+    warning('REGISTRATION GUI must be running for this one to be functional') %#ok<WNTAG>
+    return
 end
 
+if ~isfield(mainh,'Models') || isempty(mainh.Models)
+    return
+end
 
-% Here we convert the input structure to the form required by the
-% listboxes.  This input form is the same as the output form, so see
-% figure1_CloseRequestFcn for the output conversions and exporting the
-% structure.
+% Get model tags:
+mtags = {mainh.Models.Tag};
 
-% Now, VARARGIN should contain the following:
-%   #1  1-by-N cell array of object tags which are candidates for using in helical axis definitions 
-%   #2  1-by-N cell array of object tags which are candidates for using in line of action definitions 
-%   #3  1-by-N struct array of HelicalAxis definitions
-%   #4  1-by-N struct array of LineOfAction definitions
-%   #5  1-by-N strucy array of MomentArm definitions
-%
-% As follows:
-%   varargin = { HaxCandTags, LoaCandTags, HelicalAxes, LinesOfAction, MomentArms }
-    
+% Allow only models that have static & dynamic clouds
+hasS = ~cellfun(@isempty,{mainh.Models.HiRes});
+hasD = ~cellfun(@isempty,{mainh.Models.LoRes});
+hasBoth = hasS & hasD;
 
-% Manage input #1: Cell array of object tags which are candidates for being
-%                  used in helical axis calculations:
-handles.AxisCandidates = varargin{1}(:);    % Bone Names in column format
-set(handles.HaxObj1Popup,'String',handles.AxisCandidates)   %\ Populate listboxes
-set(handles.HaxObj2Popup,'String',handles.AxisCandidates)   %/ 
+handles.AxisCandidates = mtags(hasBoth);    % Bone Names in column format
+handles.LineCandidates = mtags;             % use all
 
-% Manage input #2: Cell array of object tags which are candidates for being
-%                  used in line of action calculations:
-handles.LineCandidates = varargin{2}(:);
-set(handles.LoaObjPopup,'String',handles.LineCandidates)      
+% Get data:
+hax  = mainh.HelicalAxis;
+loa  = mainh.LineOfAction;
+marm = mainh.MomentArm;
 
-% Deal other inputs:
-[hax,loa,marm] = varargin{3:end};
+set(handles.HaxObj1Popup,'String',mtags(hasBoth))   %\ Populate listboxes
+set(handles.HaxObj2Popup,'String',mtags(hasBoth))   %/ 
 
-% Store for checking outputs:
+set(handles.LoaObjPopup,'String',mtags);
+
+% Store original data for restore:
 handles.inputs.hax = hax;
 handles.inputs.loa = loa;
 handles.inputs.marm = marm;
@@ -105,14 +110,6 @@ populateList('Marm',marm,handles.MarmDefnListbox,handles.DisplayMarmCheckbox);
 % Position gui over the top of calling gui
 positionOver(handles.figure1,gcbf);
 
-% Configure some button pictures:
-load('icons.mat');
-set(handles.NewHaxButton,'CData',icons.rightarrow)
-set(handles.DelHaxButton,'CData',icons.delete_grey)
-set(handles.NewLoaButton,'CData',icons.rightarrow)
-set(handles.DelLoaButton,'CData',icons.delete_grey)
-set(handles.NewMarmButton,'CData',icons.rightarrow)
-set(handles.DelMarmButton,'CData',icons.delete_grey)
 
 % Add some key definitions:
 handles.dklist = {'delete','del','backspace'};  % Delete key options
@@ -129,7 +126,7 @@ addlistener(handles.MarmDefnListbox,'String','PostSet',@selectionInBounds);
 addlistener(handles.MarmObj1Popup,  'String','PostSet',@selectionInBounds);
 addlistener(handles.MarmObj2Popup,  'String','PostSet',@selectionInBounds);
 
-% Listeners to keep moment arm stuff up to date:
+% Listeners to keep moment arm options up to date:
 addlistener(handles.HaxDefnListbox,'String','PostSet',@updateMarmPopups);
 addlistener(handles.LoaDefnListbox,'String','PostSet',@updateMarmPopups);
 addlistener(handles.HaxDefnListbox,'Value','PostSet',@updateMarmPopups);
@@ -137,7 +134,9 @@ addlistener(handles.LoaDefnListbox,'Value','PostSet',@updateMarmPopups);
 updateMarmPopups(handles.HaxDefnListbox);
 updateMarmPopups(handles.LoaDefnListbox);
 
-% Listeners to keep the moment arm 
+% Listeners to keep the helical axis popups linked to the selction in the
+% helical axis list:
+% (This is hardly necessary...)
 addlistener(handles.HaxDefnListbox,'Value','PostSet',@updateHaxPopups);
 updateHaxPopups(handles.HaxDefnListbox);
 
@@ -160,7 +159,7 @@ varargout{1} = handles.output;
 
 
 % --- Executes on selection change in HaxObj1Popup.
-function HaxObj1Popup_Callback(hObject, eventdata, handles)
+function HaxObj1Popup_Callback(hObject, eventdata, handles) %#ok<DEFNU,*INUSD>
 % hObject    handle to HaxObj1Popup (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -170,14 +169,14 @@ function HaxObj1Popup_Callback(hObject, eventdata, handles)
 
 
 % --- Executes during object creation, after setting all properties.
-function HaxObj1Popup_CreateFcn(hObject, eventdata, handles)
+function HaxObj1Popup_CreateFcn(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to HaxObj1Popup (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
 
 % --- Executes on selection change in HaxDefnListbox.
-function HaxDefnListbox_Callback(hObject, eventdata, handles)
+function HaxDefnListbox_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to HaxDefnListbox (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -187,7 +186,7 @@ if strcmpi( 'open', get(handles.figure1,'SelectionType'))
 end
 
 % --- Executes during object creation, after setting all properties.
-function HaxDefnListbox_CreateFcn(hObject, eventdata, handles)
+function HaxDefnListbox_CreateFcn(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to HaxDefnListbox (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
@@ -195,7 +194,7 @@ function HaxDefnListbox_CreateFcn(hObject, eventdata, handles)
 
 
 % --- Executes on key press with focus on HaxDefnListbox and none of its controls.
-function HaxDefnListbox_KeyPressFcn(hObject, eventdata, handles)
+function HaxDefnListbox_KeyPressFcn(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to HaxDefnListbox (see GCBO)
 % eventdata  structure with the following fields (see UICONTROL)
 %	Key: name of the key that was pressed, in lower case
@@ -249,10 +248,13 @@ end
 obj1 = current_item(handles.HaxObj1Popup);
 obj2 = current_item(handles.HaxObj2Popup);
 
-cstr = editList('add','Hax',cstr,obj1,obj2);
+[cstr,newtag] = editList('add','Hax',cstr,obj1,obj2);
+
+% Run calcs & push changes to main program:
+updateMainData('add','Hax',newtag,obj1,obj2)
 
 % Update list box:
-set(handles.HaxDefnListbox,'String',cstr);
+set(handles.HaxDefnListbox,'String',cstr,'Value',numel(cstr));
 
 
 
@@ -276,7 +278,10 @@ newList = [new{1}(1:val-1); {[]}; new{1}(val:end)]; % Create blank space where i
 oldList = old{1};                                   % New variable for clarity
 MarmListUpdater(handles,oldList,newList)            % Update the Moment Arm list
 
-% Update
+% Remove item from main program's data:
+updateMainData('remove','Hax',old{1}{val})
+
+% Update list box
 set(handles.HaxDefnListbox,'String',cstr);
 
 % Focus the listbox
@@ -290,6 +295,14 @@ function DisplayHaxCheckbox_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of DisplayHaxCheckbox
+
+% Set the visibility state for all HelicalAxis items:
+mainh = mainguidata();                                      % Get handles 
+[mainh.HelicalAxis.Visible] = deal( get(hObject,'Value') ); % Set visibility
+mainguidata(mainh)                                          % Update handles
+
+% Update the view:
+updateGraphics()
 
 
 % --- Executes on selection change in LoaDefnListbox.
@@ -358,7 +371,10 @@ end
 
 obj = current_item(handles.LoaObjPopup);
 
-cstr = editList('add','LoA',cstr,obj);
+[cstr,newtag] = editList('add','LoA',cstr,obj);
+
+% Run calcs & push changes to main program:
+updateMainData('add','LoA',newtag,obj)
 
 % Update listbox:
 set(handles.LoaDefnListbox,'String',cstr);
@@ -370,9 +386,14 @@ function DelLoaButton_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Get listbox info
+% Get current listbox info
 val = get(handles.LoaDefnListbox,'Value');
 cstr = get(handles.LoaDefnListbox,'String');
+
+% Return silently if there are no items to delete
+if isempty(cstr)
+    return
+end
 
 % Edit the list and record the old and new information
 old = html2cell(cstr);                      % Contents as a cell removing item
@@ -383,6 +404,9 @@ new = html2cell(cstr);                      % Contents as a cell after item
 newList = [new{1}(1:val-1); {[]}; new{1}(val:end)]; % Create blank space where item removed
 oldList = old{1};                                   % New variable for clarity
 MarmListUpdater(handles,oldList,newList)            % Update the Moment Arm list
+
+% Run calcs & push changes to main program:
+updateMainData('remove','Loa',old{1})
 
 % Update
 set(handles.LoaDefnListbox,'String',cstr)
@@ -397,7 +421,13 @@ function DisplayLoaCheckbox_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hint: get(hObject,'Value') returns toggle state of DisplayLoaCheckbox
+% Set the visibility state for all HelicalAxis items:
+mainh = mainguidata();                                          % Get handles 
+[mainh.LineOfAction.Visible] = deal( get(hObject,'Value') );    % Set visibility
+mainguidata(mainh)                                              % Update handles
+
+% Update the view:
+updateGraphics()
 
 
 % --- Executes on selection change in MarmDefnListbox.
@@ -447,21 +477,22 @@ function NewMarmButton_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-obj1 = current_item(handles.HaxDefnListbox);
-obj2 = current_item(handles.LoaDefnListbox);
+
+obj1 = current_item(handles.MarmObj1Popup);
+obj2 = current_item(handles.MarmObj2Popup);
 
 % Check that the user has defined other geometry.
 if isempty(obj1) || isempty(obj2)
     return
 end
 
-% Get string components:
-parts1 = html2cell(obj1);
-parts2 = html2cell(obj2);
-
 % Add new component to list:
 cstr = get(handles.MarmDefnListbox,'String');
-cstr = editList('add','marm',cstr,parts1{1},parts2{1});
+
+[cstr,newtag] = editList('add','marm',cstr,obj1,obj2);
+
+% Run calcs & push changes to main program:
+updateMainData('add','Marm',newtag,obj1,obj2)
 
 % Update list
 set(handles.MarmDefnListbox,'String',cstr);
@@ -473,11 +504,23 @@ function DelMarmButton_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
+% Get current listbox info
 val = get(handles.MarmDefnListbox,'Value');
 cstr = get(handles.MarmDefnListbox,'String');
+
+% Return silently if there are no items to delete
+if isempty(cstr)
+    return
+end
+
+% Edit list to remove the unwanted item:
+old = html2cell( cstr{val} );
 cstr = editList('remove','Marm',cstr,val);
 
-% Update
+% Run calcs & push changes to main program:
+updateMainData('remove','Marm',old{1})
+
+% Update listbox:
 set(handles.MarmDefnListbox,'String',cstr);
 
 
@@ -487,8 +530,13 @@ function DisplayMarmCheckbox_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hint: get(hObject,'Value') returns toggle state of DisplayMarmCheckbox
+% Set the visibility state for all HelicalAxis items:
+mainh = mainguidata();                                      % Get handles 
+[mainh.MomentArm.Visible] = deal( get(hObject,'Value') );   % Set visibility
+mainguidata(mainh)                                          % Update handles
 
+% Update the view:
+updateGraphics()
 
 
 % --- Executes on button press in ClearAllButton.
@@ -548,149 +596,23 @@ switch hObject
         % In this case, user closed using the window X button
         % OUTPUT: GUI figure handle (default)
         
+        % Restore original data states:
+        restoreInitData(handles)
+        
     case handles.CancelButton
         % User pressed cancel.
         % OUTPUT: GUI figure handle (default)
         
+        % Restore original data states
+        restoreInitData(handles)
+        
     case handles.OkButton
-        % User pressed ok:
-        % OUTPUT: Geometry defitions from listboxes, with calculations
-        % preserved from inputs
-        %
-        % **A note on outputs:**
-        %
-        % The neat thing about the way this output works is that if the
-        % user deletes a definition, and then defines a new one using the
-        % same objects, the data from the old one will be preserved on
-        % output.  Not helpful if there's a problem with that original one,
-        % but that shouldn't happen often.  If there is, the work-around
-        % would be to delete it, close this GUI, then reopen and define the
-        % new one.  Otherwise, preserving calculations is a good thing,
-        % because they can be computationally expensive.
-        
-        try
-        % Build output:
-        hax = html2cell(get(handles.HaxDefnListbox,'String'));
-        loa = html2cell(get(handles.LoaDefnListbox,'String'));
-        marm = html2cell(get(handles.MarmDefnListbox,'String'));
-        
-        vis = [get(handles.DisplayHaxCheckbox,'Value'),...
-            get(handles.DisplayLoaCheckbox,'Value'),...
-            get(handles.DisplayMarmCheckbox,'Value')];
-        
-        % Here we build the ouput structure.  This output form will be the
-        % same as the input form, so see the OpeningFcn as well for reading
-        % the structure in.
-
-        Helical = struct('Tag',{},...
-            'Item1',{},...
-            'Item2',{},...
-            'Visible',{},...
-            'Axis',{},...
-            'Angle',{},...
-            'Point',{},...
-            'Slide',{});
-        LineAction = struct('Tag',{},...
-            'Item',{},...
-            'Visible',{},...
-            'Point',{},...
-            'Vector',{});
-        MomentArm = struct('Tag',{},...
-            'Item1',{},...
-            'Item2',{},...
-            'Visible',{},...
-            'Point1',{},...
-            'Point2',{},...
-            'Length',{});
-        
-        % Expand to size:
-        [Helical(1:numel(hax{1})).Tag] = deal('');
-        [LineAction(1:numel(loa{1})).Tag] = deal('');
-        [MomentArm(1:numel(marm{1})).Tag] = deal('');
-        
-        % Helper function:
-        getrow = @(defn,j)cellfun(@(x)x{j},defn,'UniformOutput',false);
-        
-        % Create / update Helical Axes:
-        for j = 1:numel(hax{1})
-            Helical(j) = configureOutputStruct(Helical(j),handles.inputs.hax,getrow(hax,j),vis(1));
-        end
-        
-        % Create / update Lines of Action:
-        for j = 1:numel(loa{1})
-            LineAction(j) = configureOutputStruct(LineAction(j),handles.inputs.loa,getrow(loa,j),vis(2));
-        end
-        
-        % Create / update Moment Arms:
-        for j = 1:numel(marm{1})
-            MomentArm(j) = configureOutputStruct(MomentArm(j),handles.inputs.marm,getrow(marm,j),vis(3));
-        end
-        
-        catch ME
-            % Around 22-Oct-12 we renamed some fields like 'Pt' -> 'Point'
-            % and 'Vec' => Vector, so let's supply an informative dialog if
-            % that looks to be the cause of the error:
-            if isequal(ME.identifier,'MATLAB:heterogeneousStrucAssignment')
-                errordlg(['Looks like you might have defined some of these '...
-                    'with an earlier version.  Try clearing and re-defining them.'],...
-                    'Old definitions?','modal')
-            end
-            rethrow(ME)
-        end
-        
-        % Populate output field:
-        handles.output = {Helical,LineAction,MomentArm};
-        
-        % Update gui
-        guidata(hObject,handles)
+        % do nothing
         
 end
 
-% First, hide the figure so the user can't mess anything up:
-set(handles.figure1,'Visible','off')
-
-% Next, trigger the listener from invoking program, MRIMagic:
-set(handles.figure1,'HitTest','off')
-
-% Then when the listener completes, it will return here and delete the
-% figure:
+% Delete the figure:
 delete(handles.figure1)
-
-
-% ------------------------------------------------------------------------
-function new = configureOutputStruct(new,old,usrdefn,vis)
-% Update the structure NEW from either an equivalent OLD structure or from
-% a USRDEFN
-% NEW and OLD are structures.
-% USRDEFN is a cell like:
-%   {'Axis_1', 'Tibia', 'Talus'}
-%   {'Line_1', 'Achilles'}
-if isempty(old)
-    idx = [];
-else
-    if isfield(old,'Item')
-        idx = strcmpi(usrdefn{2},{old.Item});
-    elseif isfield(old,'Item1')
-        idx = strcmpi(usrdefn{2},{old.Item1}) & strcmpi(usrdefn{3},{old.Item2});
-    else
-        error('Incorrect usage')
-    end
-end
-if any(idx)
-    % Found a matching input - copy it across to output:
-    new = old(idx);
-else
-    % No matching inputs - define new:
-    if isfield(new,'Item')
-        new.Item = usrdefn{2};
-    elseif isfield(new,'Item1')
-        new.Item1 = usrdefn{2};
-        new.Item2 = usrdefn{3};
-    end
-end
-% In either case, update the Tag & Visibility
-new.Tag = usrdefn{1};
-new.Visible = vis(1);
 
             
 % ------------------------------------------------------------------------
@@ -736,6 +658,7 @@ n = sum(~cellfun(@isempty,c))-1;        % Number of popups
 % Build interface:
 bkgclr = get(gcbf,'Color');
 hf = figure('Name','Edit property',...
+    'WindowStyle','modal',...
     'Visible','off',...
     'Toolbar','none',...
     'Menubar','none',...
@@ -761,14 +684,14 @@ w = pw;
 % Create popup contents:
 switch get(hobj,'Tag')
     case 'HaxDefnListbox'
-        tag = 'Hax';
+        list = 'Hax';
         str{1} = handles.AxisCandidates;
         str{2} = str{1};
     case 'LoaDefnListbox'
-        tag = 'Loa';
+        list = 'Loa';
         str{1} = handles.LineCandidates;
     case 'MarmDefnListbox'
-        tag = 'Marm';
+        list = 'Marm';
         str{1} = get(handles.MarmObj1Popup,'String');
         str{2} = get(handles.MarmObj2Popup,'String');
 end
@@ -823,21 +746,28 @@ if ~ishandle(hf)
     return
 end
 
-% Update from return values:
-new1 = str{1}{get(hp1,'Value')};
-S{sel} = strrep(S{sel},c{2},new1);
+cnew = c;                               % Initialize
+new1 = str{1}{get(hp1,'Value')};        % Item1 string
+cnew{2} = new1;                         % Cell array containing new Item1
 if numel(str)==2
-    new2 = str{2}{get(hp2,'Value')};
-    S{sel} = strrep(S{sel},c{3},new2);
+    new2 = str{2}{get(hp2,'Value')};    % Item2 string
+    
+    cnew{3} = new2;                     % Cell array containing new Item2
 end
+S = editList('modify',list,S,sel,cnew{2:end});
 set(hobj,'String',S)
 
 % Close figure
 delete(hf)        
 
+% Update data & display if there was a change:
+if ~isequal(c,cnew)
+    updateMainData('update',list,cnew{:})
+end
+
 
 % ------------------------------------------------------------------------
-function cstr = editList(opt,list,cstr,varargin)
+function [cstr,tag] = editList(action,list,cstr,varargin)
 % Edit one of the following lists to keep it updated:
 %
 %   'Hax'   Helical Axis
@@ -853,40 +783,64 @@ function cstr = editList(opt,list,cstr,varargin)
 %       list LIST.  LIST is a string from the abbreviations above.
 %
 %   cstr = editList('remove',list,cstr,j)
-%       Remove the J-th item in the cell list in CSTR and re-enumerate the
+%       Remove the J-th row in the cell list in CSTR and re-enumerate the
 %       item tags to keep them strictly monotonically increasing
 %
+%   cstr = editList('modify',list,cstr,j,tag1,tag2)
+%       Modify the J-th row in the cell list in CSTR by setting the new
+%       component tags to TAG1 and optionally TAG2
 
-switch opt
-    case 'add'
-        % Add another item to the specified list:
-        obj1 = varargin{1};         % Get first item
-        if numel(varargin) == 2     % If second item exists
-            obj2 = varargin{2};     % Get it also
+switch action
+    case {'add', 'modify'}
+        
+        % Deal inputs & get row id:
+        if isequal(action,'add')
+            % Add another item to the specified list:
+            %   varargin=={ tag1, [tag2] }
+            obj1 = varargin{1};         % Get first item
+            if numel(varargin) == 2     % If second item exists
+                obj2 = varargin{2};     % Get it also
+            end
+            % Item position
+            id = size(cstr,1)+1; % Item number / list position
+        else
+            % Modify an item already in the list
+            %   varargin=={ id, tag1, [tag2] }
+            id = varargin{1};
+            obj1 = varargin{2};
+            if numel(varargin) == 3
+                obj2 = varargin{3};
+            end
         end
         
-        % Now create the list string
-        k = size(cstr,1)+1; % Item number / list position
-        sep = '&bull;';     % separator for two-item definitions
+        % Create line item as require
+        sep = '&bull;';
         switch lower(list)
             case 'hax'
-                str = sprintf('<html><b>Axis_%d:</b> %s %s %s</html>',k,obj1,sep,obj2);
+                tag = sprintf('Axis_%d',id);
+                str = sprintf('<html><b>%s:</b> %s %s %s</html>',tag,obj1,sep,obj2);
                 
             case 'loa'
-                str = sprintf('<html><b>Line_%d:</b> %s</html>',k,obj1);
+                tag = sprintf('Line_%d',id);
+                str = sprintf('<html><b>%s:</b> %s</html>',tag,obj1);
                 
             case 'marm'
-                str = sprintf('<html><b>Arm_%d:</b> %s %s %s</html>',k,obj1,sep,obj2);
+                tag = sprintf('Arm_%d',id);
+                str = sprintf('<html><b>%s:</b> %s %s %s</html>',tag,obj1,sep,obj2);
                 
         end
-        % Now append it to the end
-        cstr{k,1} = str;
+        % Now append / overwrite
+        cstr{id,1} = str;
         
     case 'remove'
         % Remove the specified list item
-        j = varargin{1};
-        cstr(j) = [];
+        row = varargin{1};
+        cstr(row) = [];
         cstr = re_enumerate(cstr);
+        
+    otherwise
+        error('Unsupported action')
+        
 end
 
 
@@ -914,15 +868,13 @@ cstr2 = strcat(base',remain')';
 
 % ------------------------------------------------------------------------
 function c = html2cell(str)
-%HTML2CELL Strip html from a string and truncate into its components:
+%HTML2CELL Strip html from a string and truncate into its components
+%
 
 c = {};  
 
 % Strip html:
-str = strrep(str,'<html>','');
-str = strrep(str,'</html>','');
-str = strrep(str,'<b>','');
-str = strrep(str,'</b>','');
+str = regexprep(str,'</?\w*>',''); % Remove all html open & close tags
 
 % Get label
 [tag,rem1] = strtok(str,':');
@@ -951,9 +903,204 @@ end
 
 % ------------------------------------------------------------------------
 function str = current_item(hObj)
-% Function to easily get the string of the current list item
+%CURRENT_ITEM Function to easily get the string of the current list item or popup
+%
+% Also handles default '--' items by returning empty string
+
 cstr = get(hObj,'string');
-str = cstr{get(hObj,'Value')};
+
+if iscell(cstr)
+    str = cstr{get(hObj,'Value')};
+else
+    str = cstr;
+end
+
+% Return empty for default ('--') items:
+if isequal(cstr,'--')
+    str = [];
+end
+    
+
+% ------------------------------------------------------------------------
+function varargout = mainguidata(varargin)
+%MAINGUIDATA Set or get the handles of the main Registration program.
+%
+% Set Usage:
+%   handles = mainguidata()     % HANDLES returns empty if Registration GUI
+%                               %  does not exist
+%
+% Get Usage:
+%   mainguidata(handles)        % Update Registration with new HANDLES
+%                               %  structure
+
+if (nargin == 0)                       % GET usage
+    fig = findall(0,'Type','figure','Name','Registration');
+    if ~isempty(fig)
+        handles = guidata( fig );
+    else
+        handles = [];
+    end
+    varargout{1} = handles;
+    
+elseif (nargin == 1) && (nargout == 0)  % SET usage
+    handles = varargin{1};
+    guidata(handles.figure1,handles)
+    
+else
+    error('Incorrect input/output combination')
+end
+
+
+% ------------------------------------------------------------------------
+function restoreInitData(handles)
+% Restore initial data to main gui
+%   Run this function when the user clicks 'cancel'
+
+if ~isfield(handles,'inputs')
+    % GUI not properly initialised
+    return
+end
+
+% Restore initial data
+mainh = mainguidata();
+mainh.HelicalAxis  = handles.inputs.hax;
+mainh.LineOfAction = handles.inputs.loa;
+mainh.MomentArm    = handles.inputs.marm;
+mainguidata(mainh);
+
+% Update display
+updateGraphics(mainh)
+
+
+% ------------------------------------------------------------------------
+function updateMainData(action,list,tag,varargin)
+%UPDATEMAINDATA Update the main program & run necessary calculations
+%
+% EXAMPLE 1: Adding a new item:
+%
+%   updateMainData('add','Marm',marmTag,item1Tag,item2Tag)
+%
+%
+% EXAMPLE 2: Updating an existing item:
+%
+%   updateMainData('update','Marm',marmTag,item1Tag,item2Tag)
+%
+%
+% EXAMPLE 3: Removing an existing item:
+%
+%   updateMainData('remove','Marm',marmTag)     % In this case, marmTag can
+%                                               %  be a cell array of tags
+
+action = lower(action);
+list   = lower(list);
+
+handles = guidata(gcbo);
+mainh = mainguidata();
+
+switch (action)
+    
+    case {'add','update'}
+        
+        hl = FigLocker.Lock(mainh.figure1);
+        hl.setprogress(inf)
+        
+        switch lower(list)
+            case 'hax'  % Update HelicalAxis field
+                
+                hl.settext('Updating helical axes')
+                hax = struct(...
+                    'Tag',      tag,...
+                    'Item1',    varargin{1},...
+                    'Item2',    varargin{2},...
+                    'Visible',  get(handles.DisplayHaxCheckbox,'Value'),...
+                    'Axis',     [],...
+                    'Angle',    [],...
+                    'Point',    [],...
+                    'Slide',    []);
+                hax = calcHelicalAxes(hax,mainh.Models);
+                if strcmpi(action,'add')
+                    % Tack onto the end:
+                    mainh.HelicalAxis = cat(2, mainh.HelicalAxis, hax);
+                else
+                    % Replace item:
+                    mainh.HelicalAxis( strcmpi({mainh.HelicalAxis.Tag},tag) ) = hax;
+                end
+                
+            case 'loa'  % Update LineOfAction field
+                
+                hl.settext('Updating lines of action')
+                loa = struct(...
+                    'Tag',      tag,...
+                    'Item',     varargin{1},...
+                    'Visible',  get(handles.DisplayLoaCheckbox,'Value'),...
+                    'Point',    [],...
+                    'Vector',   []);
+                loa = calcLinesOfAction(loa,mainh.Models);
+                mainh.LineOfAction = cat(2, mainh.LineOfAction, loa);
+                
+            case 'marm' % Update MomentArm field
+                                
+                hl.settext('Updating moment arms')
+                marm = struct(...
+                    'Tag',      tag,...
+                    'Item1',    varargin{1},...
+                    'Item2',    varargin{2},...
+                    'Visible',  get(handles.DisplayMarmCheckbox,'Value'),...
+                    'Point1',   [],...
+                    'Point2',   [],...
+                    'Length',   []);
+                marm = calcMomentArms(marm,mainh.HelicalAxis,mainh.LineOfAction);
+                mainh.MomentArm = cat(2, mainh.MomentArm, marm); % CAT Avoids indexing problems
+                
+        end
+        
+        % Unlock
+        hl.unlock;
+        
+    case 'remove'
+        
+        if ~iscell(tag), tag = {tag}; end
+        for tagj = tag(:)'
+            switch lower(list)
+                
+                case 'hax'
+                    mainh.HelicalAxis( strcmpi( {mainh.HelicalAxis.Tag}, tagj ) ) = [];
+                    
+                case 'loa'
+                    mainh.LineOfAction( strcmpi( {mainh.LineOfAction.Tag}, tagj ) ) = [];
+                    
+                case 'marm'
+                    mainh.MomentArm( strcmpi( {mainh.MomentArm.Tag}, tagj ) ) = [];
+                    
+            end %switch
+        end %for
+end
+
+% Push the update:
+mainguidata(mainh)
+
+% Refresh the view
+updateGraphics(mainh)
+
+
+% ------------------------------------------------------------------------
+function updateGraphics(mainhandles)
+%UPDATEGRAPHICS Update the Registration figure graphics
+%
+% Use this wrapper function so there is a centralized call to the plotting
+% function, to make this program less brittle.
+% 
+% Usage:
+%   updateGraphics()                        % No inputs
+%   updateGraphics(registrationHandles)     % Provide handles structure for
+%                                           %   Registration GUI
+
+if nargin == 0
+    mainhandles = mainguidata();
+end
+
+% Refresh the view
+phaseDisplay(mainhandles)
 
 
 % ------------------------------------------------------------------------
@@ -1054,12 +1201,16 @@ switch get(hobj,'Tag')
         error('Unsupported')
 end
 
-% Check/set string:
+% Check string:
 contents = defn_cell{1};
 if isempty(contents)
     contents = '--';   % Can't be empty
 end
-set(target,'String',contents,'Value',value)
+
+% Update only if there is a change:
+if ~isequal(contents,get(target,'String'))
+    set(target,'String',contents,'Value',value)
+end
 
 % ------------------------------------------------------------------------
 function MarmListUpdater(handles,oldNames,newNames)
@@ -1084,14 +1235,18 @@ if isempty(mcstr)
 end
 
 % If NEWNAMES has a missing item, then any line in the cell array
-% MCSTR that contains the corresponding old item must be removed
+% MCSTR that contains the corresponding old item must be removed, and the
+% associate data structures removed from the main program
 for j = 1:numel(oldNames)
     
     % If NEWNAMES has a missing item, then we need to remove any MCSTR
     % lines that contain the corresponding old item
     if isempty(newNames{j})
         k = regexp(mcstr,oldNames{j});      % Find the old name
-        mcstr(~cellfun(@isempty,k)) = [];   % Remove any lines containing it
+        del = ~cellfun(@isempty,k);         % Row index
+        mdefn = html2cell(mcstr(del));      % Def'n of moment arm(s) to remove
+        mcstr(del) = [];                    % Remove any lines containing the item
+        updateMainData('remove','Marm',mdefn{1}); % Remove the moment arm from program data
     else
         mcstr = strrep(mcstr,oldNames{j},newNames{j}); 
     end    
