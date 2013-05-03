@@ -210,7 +210,7 @@ end
 
 
 % --- Executes on selection change in HaxObj2Popup.
-function HaxObj2Popup_Callback(hObject, eventdata, handles)
+function HaxObj2Popup_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to HaxObj2Popup (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -220,7 +220,7 @@ function HaxObj2Popup_Callback(hObject, eventdata, handles)
 
 
 % --- Executes during object creation, after setting all properties.
-function HaxObj2Popup_CreateFcn(hObject, eventdata, handles)
+function HaxObj2Popup_CreateFcn(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to HaxObj2Popup (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
@@ -233,7 +233,7 @@ end
 
 
 % --- Executes on button press in NewHaxButton.
-function NewHaxButton_Callback(hObject, eventdata, handles)
+function NewHaxButton_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to NewHaxButton (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -259,7 +259,7 @@ set(handles.HaxDefnListbox,'String',cstr,'Value',numel(cstr));
 
 
 % --- Executes on button press in DelHaxButton.
-function DelHaxButton_Callback(hObject, eventdata, handles)
+function DelHaxButton_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to DelHaxButton (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -289,7 +289,7 @@ uicontrol(handles.HaxDefnListbox)
 
 
 % --- Executes on button press in DisplayHaxCheckbox.
-function DisplayHaxCheckbox_Callback(hObject, eventdata, handles)
+function DisplayHaxCheckbox_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to DisplayHaxCheckbox (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -306,7 +306,7 @@ updateGraphics()
 
 
 % --- Executes on selection change in LoaDefnListbox.
-function LoaDefnListbox_Callback(hObject, eventdata, handles)
+function LoaDefnListbox_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to LoaDefnListbox (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -316,14 +316,14 @@ if strcmpi( 'open', get(handles.figure1,'SelectionType'))
 end
 
 % --- Executes during object creation, after setting all properties.
-function LoaDefnListbox_CreateFcn(hObject, eventdata, handles)
+function LoaDefnListbox_CreateFcn(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to LoaDefnListbox (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
 
 % --- Executes on selection change in LoaObjPopup.
-function LoaObjPopup_Callback(hObject, eventdata, handles)
+function LoaObjPopup_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to LoaObjPopup (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -333,7 +333,7 @@ function LoaObjPopup_Callback(hObject, eventdata, handles)
 
 
 % --- Executes during object creation, after setting all properties.
-function LoaObjPopup_CreateFcn(hObject, eventdata, handles)
+function LoaObjPopup_CreateFcn(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to LoaObjPopup (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
@@ -341,7 +341,7 @@ function LoaObjPopup_CreateFcn(hObject, eventdata, handles)
 
 
 % --- Executes on key press with focus on LoaDefnListbox and none of its controls.
-function LoaDefnListbox_KeyPressFcn(hObject, eventdata, handles)
+function LoaDefnListbox_KeyPressFcn(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to LoaDefnListbox (see GCBO)
 % eventdata  structure with the following fields (see UICONTROL)
 %	Key: name of the key that was pressed, in lower case
@@ -357,7 +357,7 @@ end
 
 
 % --- Executes on button press in NewLoaButton.
-function NewLoaButton_Callback(hObject, eventdata, handles)
+function NewLoaButton_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to NewLoaButton (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -381,7 +381,7 @@ set(handles.LoaDefnListbox,'String',cstr);
 
 
 % --- Executes on button press in DelLoaButton.
-function DelLoaButton_Callback(hObject, eventdata, handles)
+function DelLoaButton_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to DelLoaButton (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -416,7 +416,7 @@ uicontrol(handles.LoaDefnListbox)
 
 
 % --- Executes on button press in DisplayLoaCheckbox.
-function DisplayLoaCheckbox_Callback(hObject, eventdata, handles)
+function DisplayLoaCheckbox_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to DisplayLoaCheckbox (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -431,7 +431,7 @@ updateGraphics()
 
 
 % --- Executes on selection change in MarmDefnListbox.
-function MarmDefnListbox_Callback(hObject, eventdata, handles)
+function MarmDefnListbox_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to MarmDefnListbox (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -443,7 +443,7 @@ end
 
 
 % --- Executes during object creation, after setting all properties.
-function MarmDefnListbox_CreateFcn(hObject, eventdata, handles)
+function MarmDefnListbox_CreateFcn(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to MarmDefnListbox (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
@@ -456,7 +456,7 @@ end
 
 
 % --- Executes on key press with focus on MarmDefnListbox and none of its controls.
-function MarmDefnListbox_KeyPressFcn(hObject, eventdata, handles)
+function MarmDefnListbox_KeyPressFcn(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to MarmDefnListbox (see GCBO)
 % eventdata  structure with the following fields (see UICONTROL)
 %	Key: name of the key that was pressed, in lower case
@@ -472,7 +472,7 @@ end
 
 
 % --- Executes on button press in NewMarmButton.
-function NewMarmButton_Callback(hObject, eventdata, handles)
+function NewMarmButton_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to NewMarmButton (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -499,7 +499,7 @@ set(handles.MarmDefnListbox,'String',cstr);
 
 
 % --- Executes on button press in DelMarmButton.
-function DelMarmButton_Callback(hObject, eventdata, handles)
+function DelMarmButton_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to DelMarmButton (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -525,7 +525,7 @@ set(handles.MarmDefnListbox,'String',cstr);
 
 
 % --- Executes on button press in DisplayMarmCheckbox.
-function DisplayMarmCheckbox_Callback(hObject, eventdata, handles)
+function DisplayMarmCheckbox_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to DisplayMarmCheckbox (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -540,7 +540,7 @@ updateGraphics()
 
 
 % --- Executes on button press in ClearAllButton.
-function ClearAllButton_Callback(hObject, eventdata, handles)
+function ClearAllButton_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to ClearAllButton (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -560,7 +560,7 @@ guidata(hObject,handles)
 
 
 % --- Executes on button press in OkButton.
-function OkButton_Callback(hObject, eventdata, handles)
+function OkButton_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to OkButton (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -569,7 +569,7 @@ figure1_CloseRequestFcn(hObject, [], handles)
 
 
 % --- Executes on button press in CancelButton.
-function CancelButton_Callback(hObject, eventdata, handles)
+function CancelButton_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to CancelButton (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -653,7 +653,6 @@ S = get(hobj,'String');
 C = html2cell(S);
 
 c = {C{1}{sel} C{2}{sel} C{3}{sel}};
-n = sum(~cellfun(@isempty,c))-1;        % Number of popups
 
 % Build interface:
 bkgclr = get(gcbf,'Color');
@@ -672,7 +671,7 @@ pw = 130;   % popup width
 sep = 10;   % separation
 x = 5;      % initial x value
 w = tw;     % initial width
-ht = uicontrol(hf,'Style','text',...
+uicontrol(hf,'Style','text',...
     'Position',[x y w h],...
     'HorizontalAlignment','right',...
     'BackgroundColor',bkgclr,...
@@ -1261,7 +1260,7 @@ set(handles.MarmDefnListbox,'String',mcstr)
 
 
 % --- Executes on selection change in MarmObj1Popup.
-function MarmObj1Popup_Callback(hObject, eventdata, handles)
+function MarmObj1Popup_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to MarmObj1Popup (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -1271,7 +1270,7 @@ function MarmObj1Popup_Callback(hObject, eventdata, handles)
 
 
 % --- Executes during object creation, after setting all properties.
-function MarmObj1Popup_CreateFcn(hObject, eventdata, handles)
+function MarmObj1Popup_CreateFcn(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to MarmObj1Popup (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
@@ -1284,7 +1283,7 @@ end
 
 
 % --- Executes on selection change in MarmObj1Popup.
-function MarmObj2Popup_Callback(hObject, eventdata, handles)
+function MarmObj2Popup_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to MarmObj1Popup (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -1294,7 +1293,7 @@ function MarmObj2Popup_Callback(hObject, eventdata, handles)
 
 
 % --- Executes during object creation, after setting all properties.
-function MarmObj2Popup_CreateFcn(hObject, eventdata, handles)
+function MarmObj2Popup_CreateFcn(hObject, eventdata, handles) %#ok<DEFNU>
 % hObject    handle to MarmObj1Popup (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
