@@ -950,7 +950,7 @@ function update_infolist(pth,hObject,handles)
 % hObject
 MONOSPACED = 'Monospaced';
 NORMAL = 'Helvetica';
-font = MONOSPACED;
+font = MONOSPACED;      % Set default
 cbk = [];
 ud  = [];
 S = [];
@@ -972,13 +972,15 @@ elseif isdicomdir(pth)
     slideVis = 'on';
     
 elseif isdicom(pth)
-    S = header_from_dicom(pth);
     font = NORMAL;
+    S = header_from_dicom(pth,font);
     ud = pth;
     if lbt > size(S,1)
         lbt = size(S,1);
     end
-else
+elseif isimage(pth)
+    S = header_from_image(pth,font);
+    
     % do nothing - show blank
 end
 if isempty(v) || v == 0
@@ -1058,7 +1060,7 @@ end %isimage()
 
 
 % ------------------------------------------------------------------------
-function H = header_from_dicom(dcmimgfile)
+function H = header_from_dicom(dcmimgfile,font)
 props = {...
     'RequestedProcedureDescription',... % OR 'PerformedProcedureStepDescription'
     'RequestedProcedureComments',...
@@ -1079,40 +1081,36 @@ sep = ':  ';
 for j = 1:numel(props)
     if isfield(i,props{j})
         p = props{j};
-        v = i.(props{j});
-        if isnumeric(v)
-            v = num2str(v(:)');     % force 1-by-n format, then convert
-        elseif isa(v,'struct')
-            v = struct2str(v);
-        end
+        v = header_data_sanitize(i.(props{j}));
         C(end+1,:) = { p , sep, v } ; 
         %h.(props{j}) = i.(props{j});
     end
 end
 
-H = cell_html_formatted_list(C);
+H = cell_html_formatted_list(C,font);
 
+end %header_from_dicom()
 
-    % -----------------------------------------
-    function L = cell_html_formatted_list(C)
-        % Find the longest item in each column, & calculate the width (in pixels) of each
-        % column:
-        [nr,nc] = size(C);
-        cwidths = NaN(1,nc);
-        hf = figure('Visible','off');
-        for k = 1:nc
-            hu = uicontrol(hf,...
-                'Style','text',...
-                'HorizontalAlignment','Left',...
-                'String',C(:,k));
-            extent = get(hu,'Extent');
-            cwidths(k) = extent(3);
-        end
-        close(hf);
-        for k = 1:nr
-            L{k,1} = html_columnised_row(cwidths,C(k,:));
-        end
-    end %cell_html_formatted_list()
+% ------------------------------------------------------------------------
+function L = cell_html_formatted_list(C,font)
+% Find the longest item in each column, & calculate the width (in pixels) of each
+% column:
+[nr,nc] = size(C);
+cwidths = NaN(1,nc);
+hf = figure('Visible','off');
+for k = 1:nc
+    hu = uicontrol(hf,...
+        'Style','text',...
+        'HorizontalAlignment','Left',...
+        'FontName',font,...
+        'String',C(:,k));
+    extent = get(hu,'Extent');
+    cwidths(k) = extent(3);
+end
+close(hf);
+for k = 1:nr
+    L{k,1} = html_columnised_row(cwidths,C(k,:));
+end
 
     % -----------------------------------------
     function htmlrow = html_columnised_row(widths,entries)
@@ -1123,38 +1121,83 @@ H = cell_html_formatted_list(C);
         pre1 = sprintf('<html><table width=%s style=''table-layout:fixed''>', num2str(table_width));
         pre2 = [];
         content = '<tr>';
-        for k = 1:nc
-            pre2 = [pre2 sprintf('<col width=%s>', num2str(widths(k)))];  %#ok<*AGROW>
-            content = [content sprintf('<td width="%s">%s</td>',num2str(widths(k)),entries{k})]; 
+        for j = 1:nc
+            pre2 = [pre2 sprintf('<col width=%s>', num2str(widths(j)))];  %#ok<*AGROW>
+            content = [content sprintf('<td width="%s">%s</td>',num2str(widths(j)),entries{j})]; 
         end
         content = [content '</tr>'];
         post = '</table></html>';
         htmlrow = [pre1 pre2 content post];
     end %html_columnised_row()
 
-    % ------------------------------------------
-    function s = struct2str(S)
-        fields = fieldnames(S);
-        s = '';
-        for k = 1:numel(fields)
-            fkname = fields{k};
-            fkdata = S.(fkname);
-            if isa(fkdata,'struct')
-                fkdata = struct2str(fkdata);
-            elseif isnumeric(fkdata)
-                fkdata = num2str(fkdata);
-            end
-            if k == 1
-                fsep = '';  
-            else
-                fsep = ',  ';  % field separator
-            end
-            s = [s fsep fkname ': ' fkdata]; 
-        end
-    end %struct2str()
+end %cell_html_formatted_list()
 
-end %header_from_dicom()
 
+% ------------------------------------------------------------------------
+function s = header_struct2str(S)
+fields = fieldnames(S);
+s = '';
+for k = 1:numel(fields)
+    fkname = fields{k};
+    fkdata = S.(fkname);
+    if isa(fkdata,'struct')
+        fkdata = header_struct2str(fkdata);
+    elseif isnumeric(fkdata)
+        fkdata = num2str(fkdata);
+    end
+    if k == 1
+        fsep = '';
+    else
+        fsep = ',  ';  % field separator
+    end
+    s = [s fsep fkname ': ' fkdata];
+end
+end %header_struct2str()
+
+% ------------------------------------------------------------------------
+function H = header_from_image(impath,font)
+% Create header using image information gathered using IMINFO
+% See also header_from_dicom()
+
+[pth,name,ext] = fileparts(impath);
+
+% Get info & structure header text:
+info = imfinfo(impath);
+
+% Make some adjustments:
+info.Filename = [name ext];
+info.Path = pth;
+info.Format = upper(info.Format);
+
+% Create list of properties we want to display:
+props = {'Filename','Path','Format','Width','Height',...
+    'BitDepth','ColorType','Compression'};
+
+% Create cell array of relevant data:
+C = {};
+sep = ':  ';
+for p = props
+    if isfield(info,p)
+        % See also header_from_dicom
+        v = header_data_sanitize(info.(p{1}));        
+        C(end+1,:) = { p{1}, sep, v };
+    end
+end
+
+H = cell_html_formatted_list(C,font);
+
+end %header_from_image()
+
+% ------------------------------------------------------------------------
+function data = header_data_sanitize(data)
+% Convert numeric or structure into string.  Strings pass through
+% un-touched
+if isnumeric(data)
+    data = num2str(data(:)');     % force 1-by-n format, then convert
+elseif isa(data,'struct')
+    data = header_struct2str(data);
+end
+end %header_data_sanitize()
 
 % ------------------------------------------------------------------------
 function [L,D] = list_from_dicomdir(dcmdirfile,usecache)
