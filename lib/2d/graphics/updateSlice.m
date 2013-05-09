@@ -61,13 +61,18 @@ else
     %   - Image (slice) annotation
     if nargin > 1
         
-        % Set image:
-        I = handles.DICOM.X(:,:,sj,pj);
+        % Get image specs:
+        IMG = handles.(activeImageField(handles));
+        dims = size(IMG);
+        ns = dims(end-1);
+        np = dims(end);
+        I = currentImage(handles,sj,pj);
+        
+        % Set image
         set(hi,'CData',I)                       % Update current image data
         
         % Update Stack Annotation:
-        annotationManager(handles.StackAnnotation,...
-            [],sj,size(handles.DICOM.X,3),pj,size(handles.DICOM.X,4),[],[]);
+        annotationManager(handles.StackAnnotation,[],sj,ns,pj,np,[],[]);
         
         % Update Image (slice) annotation:
         infoWBMF(handles.figure1)

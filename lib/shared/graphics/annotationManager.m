@@ -201,16 +201,18 @@ ianno = get(hAnno,'String');
 pt = pt-1;          % Dicom uses zero-based
 pxyz = roi.pix2mm3D(pt,PixelSpacing,ImagePositionPatient,ImageOrientationPatient);
 pt = round(pt);     % Whole mm values
-imDimStr = @()sprintf('Image Size: %d \\times %d',imsize);
-crsLocPix = @()sprintf('X: %d px  Y: %d px  Value: %0.0f',pt(1),pt(2),value);
+value = round(rand(1,3)*255);
+% These strings handle grayscale / rgb image data where appropriate:
+imDimStr  = @()[sprintf('Image Size: %d',imsize(1)) sprintf(' \\times %d',imsize(2:end)) ];
+crsLocPix = @()[sprintf('X: %3d px  Y: %3d px  Value:',pt(1),pt(2)) sprintf(' %3.0f',value) '' ];
 crsLocMM  = @()sprintf('X: %04.2f mm  Y: %04.2f mm  Z: %04.2f mm',pxyz(1),pxyz(2),pxyz(3));
 
 % Initialisation case:
 if isempty(ianno)
     ianno = {...
-        imDimStr();...       % Image Size: 420 
-        '';...             % X: 154 px  Y: 205 px  Value: 145
-        '';...             % X: 89.73 mm  Y: 124.87 mm  Z: 345.13 mm
+        imDimStr();...  % Image Size: 420 
+        '';...          % X: 154 px  Y: 205 px  Value: 145
+        '';...          % X: 89.73 mm  Y: 124.87 mm  Z: 345.13 mm
         };
 else
 % Update case:

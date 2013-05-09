@@ -244,13 +244,15 @@ switch lower(opt)
     case 'segmentation'
         D.pth   = [];    % Initialise
         D.files = [];
-        D.info  = [];
+        D.info  = struct([]);
         D.X     = [];
         D.z     = [];
         D.s     = [];
         D.CLim  = [];   % Display limits of X
+        I       = D;    % Identical Structure
         UNIQUE = {...
             'DICOM',  D;...
+            'IMAGE',  I;...
             'traces', roi([]);...   % Empty roi structure
             };
     case {'registration','reconstruction'} % There was a name change at some point

@@ -66,7 +66,7 @@ set(handles.axes1,'Visible','off')          % Don't display axes
 imshow([],'Parent',handles.axes1)           % Show nothing
 set(handles.Slider_Frame, 'Visible','off')  % Don't display slider
 
-
+% Configure list:
 addlistener(handles.Listbox_Files,'String','PostSet',@list_listener);
 addlistener(handles.Listbox_Files,'Value','PostSet',@list_listener);
 
@@ -692,35 +692,6 @@ end %list_listener()
 
 
 % ------------------------------------------------------------------------
-function C = cellsmash(A,B)
-% Smash cell arrays A & B into the same cell array
-% Both A & B can be cell arrays of the same size, or either A or B can be a
-% cell array with the other being a string for insertion into every element
-% Usage:
-%   C = cellsmash({'hi';'bye';'fly'}, ' Barry')
-%   C = cellsmash('Barry ',{'thought','said','did'})
-%   C = cellsmash({'Barry';'Jo';'Bill'},{' can'; ' did'; ' will'})
-%   C = cellsmash({'hi ','Barry';'bye ','Jo'})
-if nargin == 1  % cellsmash(A)
-    for j = 1:size(A,1)
-        C{j,1} = [A{j,:}];
-    end
-elseif iscell(A) && iscell(B)
-    assert(isequal(numel(A),numel(B)),'If two cell arrays are provided, they must be the same size')
-    C = cellfun(@(a,b)[a,b],A,B,'UniformOutput',false);
-elseif iscell(A) && ~iscell(B)
-    C = cellfun(@(a) [a,B],A,'UniformOutput',false);
-elseif ~iscell(A) && iscell(B)
-    C = cellfun(@(b) [A,b],B,'UniformOutput',false);
-else
-    error('Bad inputs to cellsmash()')
-end
-
-
-end %cellsmash()
-
-
-% ------------------------------------------------------------------------
 function exlist = extStr2extCell(exstr)
 % Convert user-defined extension string to cell list
 d = ';';
@@ -825,6 +796,9 @@ elseif isa(ud,'DICOMDir')
     
 elseif isa(ud,'char') && isdicom(ud)    
     f = {ud};                           % Get single dicom filepath
+    
+elseif isimage(ud)
+    f = {ud};
     
 end
 
@@ -978,10 +952,14 @@ elseif isdicom(pth)
     if lbt > size(S,1)
         lbt = size(S,1);
     end
+    
 elseif isimage(pth)
     S = header_from_image(pth,font);
+    ud = pth;
     
+else
     % do nothing - show blank
+    
 end
 if isempty(v) || v == 0
     v = 1;
@@ -1045,18 +1023,6 @@ end %isdicomdir()
 function tf = isdir(pname)
 tf = exist(pname,'dir')==7;
 end %isdir()
-
-
-% ------------------------------------------------------------------------
-function tf = isimage(fname)
-% Test to see if file is probably an image (by examining file extension)
-[~,~,ex] = fileparts(fname);
-formats = imformats;
-imexts = {formats.ext};
-imexts = [imexts{:}];
-imexts = cellsmash('.',imexts);
-tf = any( strcmpi(imexts, ex) );
-end %isimage()
 
 
 % ------------------------------------------------------------------------

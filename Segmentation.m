@@ -244,7 +244,8 @@ if ~isempty(handles.traces)
 end    
 
 % Now launch the gui & add update listener:
-hf = LoadDicomUtil({handles.DICOM.pth},'-detach');
+pthseed = handles.( activeImageField(handles) ).pth;
+hf = LoadDicomUtil({pthseed},'-detach');
 addlistener(hf,'HitTest','PreSet',@dicomLoadUpdater);
 
 
@@ -826,26 +827,62 @@ function dicomLoadUpdater(~,event)
 % Get handles of main GUI & output from closing GUI
 [handles,flist] = getGuiOutput(event);
 
-if isempty(flist)
+if isempty(flist)                       % No files selected
     return
 end
 
-updateSlice(handles,[],[]); % Remove all displayed traces
-   
-[X,z,s,dinfo,files] = load4Ddcm(flist);     % Load files
-[pathname,~,~] = fileparts(files{1});       % Get default path
+% First, empty all old image data:
+handles.DICOM.pth   = [];
+handles.DICOM.files = [];
+handles.DICOM.info  = struct([]);
+handles.DICOM.X     = [];
+handles.DICOM.z     = [];
+handles.DICOM.s     = [];
+handles.DICOM.CLim  = [];
 
-% Store in handles
-handles.DICOM.pth = pathname;
-handles.DICOM.files = files;
-handles.DICOM.info  = dinfo;
-handles.DICOM.X   = X;
-handles.DICOM.z   = z;
-handles.DICOM.s   = s;
-handles.DICOM.CLim = [ min(handles.DICOM.X(:)) max(handles.DICOM.X(:)) ];
+handles.IMAGE.pth   = [];
+handles.IMAGE.files = [];
+handles.IMAGE.info  = struct([]);
+handles.IMAGE.X     = [];
+handles.IMAGE.z     = [];
+handles.IMAGE.s     = [];
+handles.IMAGE.CLim  = [];
+
+[pathname,~,~] = fileparts(flist{1});       % Get default path
+
+% Now load image & any related information
+if all( cellfun(@isimage,flist) )               % Normal image formats selected
+    % Load images
+    handles.IMAGE.X = loadImfiles(flist);       
+    
+    % Store other data:
+    clim = [min(handles.IMAGE.X(:)) max(handles.IMAGE.X(:))];
+    handles.IMAGE.CLim    = clim;
+    handles.IMAGE.files   = flist;
+    handles.IMAGE.pth     = pathname;
+    
+elseif all( cellfun(@isdicom,flist) )           % Dicom image files selected
+    % Load files
+    [handles.DICOM.X,...
+        handles.DICOM.z,...
+        handles.DICOM.s,...
+        handles.DICOM.info,...
+        handles.DICOM.files] = load4Ddcm(flist);     
+    
+    % Store other data:
+    clim = [min(handles.DICOM.X(:)) max(handles.DICOM.X(:))];
+    handles.DICOM.CLim = clim;
+    handles.DICOM.pth  = pathname;
+    
+else
+    error('One or more files selected had an un-recognised file type')
+    
+end
+
+% Remove all displayed traces
+updateSlice(handles,[],[]); 
 
 % Update user path:
-handles.DICOM.pth = pathname;
 handles.userPath = pathname;
 
 % Update guidata
@@ -853,7 +890,7 @@ guidata(handles.figure1,handles)
 
 % Now that the guidata is updated, configure the view:
 configureView2(handles);
-set(handles.axes1,'CLim',handles.DICOM.CLim)
+set(handles.axes1,'CLim',clim)
 
 
 
