@@ -245,6 +245,9 @@ function Edit_Extensions_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'String') returns contents of Edit_Extensions as text
 %        str2double(get(hObject,'String')) returns contents of Edit_Extensions as a double
 
+% On return, refresh file list:
+file_list_refresh(get_directory(handles))
+
 end
 
 
