@@ -18,12 +18,11 @@ sj = current('slice',handles.axes1);
 pj = current('phase',handles.axes1);
 
 % Return if not yet configured:
-if ( isempty(sj) && isempty(pj) ) || ( isempty(handles.DICOM) || isempty(handles.DICOM.X) )
+if ( isempty(sj) && isempty(pj) ) || ( isempty(handles.Images) || isempty(handles.Images.X) )
     return
 end
 
-ns = size(handles.DICOM.X,3);
-np = size(handles.DICOM.X,4);
+[ns,np] = handles.Images.stacksize();
 
 % Now we check for the SHIFT modifier 
 %   If shift is being held while scrolling, we are scrolling phases, if

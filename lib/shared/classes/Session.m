@@ -242,18 +242,9 @@ end
 
 switch lower(opt)
     case 'segmentation'
-        D.pth   = [];    % Initialise
-        D.files = [];
-        D.info  = struct([]);
-        D.X     = [];
-        D.z     = [];
-        D.s     = [];
-        D.CLim  = [];   % Display limits of X
-        I       = D;    % Identical Structure
         UNIQUE = {...
-            'DICOM',  D;...
-            'IMAGE',  I;...
-            'traces', roi([]);...   % Empty roi structure
+            'Images', ImageStack();...  % Empty ImageStack object
+            'traces', roi([]);...       % Empty roi object
             };
     case {'registration','reconstruction'} % There was a name change at some point
         UNIQUE = {...
@@ -378,7 +369,7 @@ if isfield(handles,'traces') && isa(handles.traces,'struct')
         handles.traces = roi({});
     else
         traces = roi(handles.traces);
-        handles.traces = traces.addpatientcs(handles.DICOM.info);
+        handles.traces = traces.addpatientcs(handles.Images.info);
     end
 end
 end %check_roi_upgrade()

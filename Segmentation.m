@@ -231,7 +231,7 @@ function MI_LoadDicom_Callback(~, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Check to see if we should erase traces when loading new DICOM stack:
+% Check to see if we should erase traces when loading new Images:
 if ~isempty(handles.traces)
     button = warncanceldlg('This will erase all the current traces.  Are you sure?','Erase Traces');
     if ~isequal(button,'Ok')
@@ -244,7 +244,7 @@ if ~isempty(handles.traces)
 end    
 
 % Now launch the gui & add update listener:
-pthseed = handles.( activeImageField(handles) ).pth;
+pthseed = handles.Images.pth;
 hf = LoadDicomUtil({pthseed},'-detach');
 addlistener(hf,'HitTest','PreSet',@dicomLoadUpdater);
 
@@ -305,8 +305,7 @@ function MI_Navigator_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-ns = size(handles.DICOM.X,3);
-np = size(handles.DICOM.X,4);
+[ns,np] = handles.Image.stacksize();
 
 % Launch the GUI
 hf = Navigator(ns,np,handles.traces);
@@ -345,7 +344,7 @@ end
 
 % If any old versions were loaded that don't have patient data, load them
 if any(~rois.haspatientcs)
-    rois = rois.addpatientcs(handles.DICOM.info);               % Add the data
+    rois = rois.addpatientcs(handles.Images.info);              % Add the data
     msg(~cellfun(@isempty,strfind(msg,'PixelSpacing'))) = [];   % Drop the message
 end
     
@@ -375,40 +374,6 @@ updateSlice(handles);
 % Update handles:
 handles.userPath = pthname;
 guidata(hObject,handles)
-
-
-% ------------------------------------------------------------------------
-function importRoiHelper(fname)
-% Function for importing ROIs.  This has been abstracted away from the
-% import callback to allow for testing.
-
-% Load the mat file:
-roi_data = load([pthname fname]);
-if isfield(roi_data,'ROI')          % ROI version >= 1
-    rois_in = roi_data.ROI;
-elseif isfield(roi_data,'ROIs')     % Older files
-    rois_in = roi_data.ROIs;
-else
-	errordlg('Cannot find ROI variables in this file','No ROIs','Modal')
-    return
-end
-
-
-% Load ROIs into current roi structure (necessary for version compatability)
-for j = 1:numel(rois_in)
-    rois(j) = roifun('load',rois_in(j));
-    
-    if rois(j).Version == 0
-        % Need to add the dicom file:
-        rois(j).DcmFile = handles.DICOM.info(rois(j).Slice).Filename;
-    end
-end
-
-% Sort them, just 'coz.
-[~,idx] = sort([rois.Slice]);
-rois = rois(idx);
-
-
 
 
 % ------------------------------------------------------------------------
@@ -442,7 +407,7 @@ end
 %   (Note that this includes ROIs across all slices and all phases, if
 %   there is more than one of each/either)
 ROI = handles.traces(strcmpi({handles.traces.Color},clrs{sel})); %#ok<NASGU>
-study = getStudyName(handles.DICOM.pth);
+study = getStudyName(handles.Images.pth);
 
 % Request file location from user:
 seed = [handles.userPath study '_'];
@@ -565,14 +530,14 @@ function MI_DicomHeader_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-if isempty(handles.DICOM.X)
+if isempty(handles.Images.X)
     return
 end
 
 % Display the file metadata:
 s = current('slice',handles.axes1);
 p = current('phase',handles.axes1);
-dinfo = handles.DICOM.info(s,p);
+dinfo = handles.Images.info(s,p);
 assignin('base','dinfo',dinfo)
 disp(dinfo)
 openvar('dinfo');
@@ -618,7 +583,7 @@ function TraceTool_ClickedCallback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Can't use the pen when there aren't any images:
-if isempty(handles.DICOM.X)
+if isempty(handles.Images.X)
     set(hObject,'State','off')
     return
 end
@@ -664,12 +629,12 @@ end
 % ------------------------------------------------------------------------
 function AutoBcTool_ClickedCallback(hObject, eventdata, handles)
 
-if isempty(handles.DICOM.CLim)
+if isempty(handles.Images.CLim)
     set(hObject,'State','off')
     return
 end
 
-clim = imlimits(handles.DICOM.X,0.999);
+clim = imlimits(handles.Images.X,0.999);
 set(handles.axes1,'CLim',clim)
 % Use toggle button with pause so user gets some feedback on button press:
 pause(0.05)
@@ -726,9 +691,9 @@ end
 % ------------------------------------------------------------------------
 function ResetBcTool_ClickedCallback(hObject, eventdata, handles)
 
-if ~isempty(handles.DICOM.CLim)
+if ~isempty(handles.Images.CLim)
     % Revert to default limits:
-    set(handles.axes1,'CLim',handles.DICOM.CLim)
+    set(handles.axes1,'CLim',handles.Images.CLim)
     guidata(hObject,handles)
 end
 
@@ -741,7 +706,7 @@ set(hObject,'State','off')
 function AdjustBcTool_ClickedCallback(hObject, eventdata, handles)
 
 % Only allow the tool to work if images are loaded:
-if isempty(handles.DICOM.CLim)
+if isempty(handles.Images.CLim)
     set(hObject,'State','off')
     return
 end
@@ -831,66 +796,21 @@ if isempty(flist)                       % No files selected
     return
 end
 
-% First, empty all old image data:
-handles.DICOM.pth   = [];
-handles.DICOM.files = [];
-handles.DICOM.info  = struct([]);
-handles.DICOM.X     = [];
-handles.DICOM.z     = [];
-handles.DICOM.s     = [];
-handles.DICOM.CLim  = [];
-
-handles.IMAGE.pth   = [];
-handles.IMAGE.files = [];
-handles.IMAGE.info  = struct([]);
-handles.IMAGE.X     = [];
-handles.IMAGE.z     = [];
-handles.IMAGE.s     = [];
-handles.IMAGE.CLim  = [];
-
-[pathname,~,~] = fileparts(flist{1});       % Get default path
-
-% Now load image & any related information
-if all( cellfun(@isimage,flist) )               % Normal image formats selected
-    % Load images
-    handles.IMAGE.X = loadImfiles(flist);       
-    
-    % Store other data:
-    clim = [min(handles.IMAGE.X(:)) max(handles.IMAGE.X(:))];
-    handles.IMAGE.CLim    = clim;
-    handles.IMAGE.files   = flist;
-    handles.IMAGE.pth     = pathname;
-    
-elseif all( cellfun(@isdicom,flist) )           % Dicom image files selected
-    % Load files
-    [handles.DICOM.X,...
-        handles.DICOM.z,...
-        handles.DICOM.s,...
-        handles.DICOM.info,...
-        handles.DICOM.files] = load4Ddcm(flist);     
-    
-    % Store other data:
-    clim = [min(handles.DICOM.X(:)) max(handles.DICOM.X(:))];
-    handles.DICOM.CLim = clim;
-    handles.DICOM.pth  = pathname;
-    
-else
-    error('One or more files selected had an un-recognised file type')
-    
-end
+% Load images into ImageStack object:
+handles.Images = ImageStack.LoadFiles(flist);
 
 % Remove all displayed traces
 updateSlice(handles,[],[]); 
 
 % Update user path:
-handles.userPath = pathname;
+handles.userPath = handles.Images.pth;
 
 % Update guidata
 guidata(handles.figure1,handles)
 
 % Now that the guidata is updated, configure the view:
 configureView2(handles);
-set(handles.axes1,'CLim',clim)
+set(handles.axes1,'CLim',handles.Images.CLim)
 
 
 

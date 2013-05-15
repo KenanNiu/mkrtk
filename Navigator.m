@@ -214,8 +214,8 @@ handles = guidata(hMainGui);          % Main GUI handles
 traces = handles.traces;              % Retrieve traces
 clrs = ({handles.traces.Color});      % Colours list
 
-nslices = size(handles.DICOM.info,1); % Number of slices
-nphases = size(handles.DICOM.info,2); % Number of phases
+nslices = size(handles.Images.info,1); % Number of slices
+nphases = size(handles.Images.info,2); % Number of phases
 
 slices = [traces.Slice]';           % List of traced slices
 phases = [traces.Phase]';           % List of traced phases

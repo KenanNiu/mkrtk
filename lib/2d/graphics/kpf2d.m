@@ -20,7 +20,7 @@ setappdata(hfig,'CurrentKey',event.Key)
 % Now manage the key presses:
 handles = guidata(hfig);
 
-if isempty(handles.DICOM) || isempty(handles.DICOM.X)
+if isempty(handles.Images) || isempty(handles.Images.X)
     return
 end
 
@@ -28,9 +28,8 @@ ha = handles.axes1;         % Shorthand
 s = current('slice',ha);    
 p = current('phase',ha);
 
-X = handles.DICOM.X;        % Shorthand
-ns = size(X,3);
-np = size(X,4);
+X = handles.Images.X;        % Shorthand
+[ns,np] = handles.Images.stacksize();
 
 switch event.Key
     

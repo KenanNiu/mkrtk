@@ -25,7 +25,7 @@ ax = handles.axes1;
 
 % Discretisation control:
 %   Specify min & max spacing for points on a trace:
-DTGT = mean(handles.DICOM.s); % Target discretisation
+DTGT = 1;%mean(handles.Images.s); % Target discretisation
 DMIN = DTGT/2;
 DMAX = DTGT*4;
 
@@ -66,7 +66,7 @@ set(hf,'WindowButtonUpFcn', @traceWBUF);
         p = a(1,1:2);
         
         % Discretisation control:
-        %   Only current poitn to trace if it is further than DMIN from the
+        %   Only current point to trace if it is further than DMIN from the
         %   last trace point:
         last = [tmpx(end), tmpy(end)];
         dc = p - last;
@@ -105,12 +105,12 @@ set(hf,'WindowButtonUpFcn', @traceWBUF);
         p = current('phase',handles.axes1);
         
         % Get the full path of that Dicom file:
-        dcm = [handles.DICOM.pth, handles.DICOM.files{s,p}];
+        dcm = [handles.Images.pth, handles.Images.files{s,p}];
         
         % Get its header data:
-        PS  = handles.DICOM.info(s,p).PixelSpacing;
-        IPP = handles.DICOM.info(s,p).ImagePositionPatient;
-        IOP = handles.DICOM.info(s,p).ImageOrientationPatient;
+        PS  = handles.Images.info(s,p).PixelSpacing;
+        IPP = handles.Images.info(s,p).ImagePositionPatient;
+        IOP = handles.Images.info(s,p).ImageOrientationPatient;
         
         % Clear the drawing callbacks:
         set(hf,'WindowButtonMotionFcn',[])

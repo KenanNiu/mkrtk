@@ -219,29 +219,10 @@ hObject = h; % For convenience
 pathname = [toolboxdir('images') filesep 'imdemos' filesep];
 filename = 'knee1.dcm';
 
-% The following code is ripped straight out of
-% Segmentation>MI_LoadDicom_Callback()
-handles.DICOM.pth = pathname;
-if ~iscell(filename), filename = {filename}; end
-try
-    [X,z,s,dinfo] = readDicoms( pathname, filename );
-catch ME
-    if strcmp(ME.identifier,'MATLAB:waitbar:InvalidInputs')
-        disp('User cancelled')
-        return
-    else
-        rethrow(ME)
-    end
-end
-handles.DICOM.files = filename(:);  % Slices populate a column
-handles.DICOM.info  = dinfo;
-handles.DICOM.X   = X;
-handles.DICOM.z   = z;
-handles.DICOM.s   = s;
-handles.DICOM.CLim = imlimits(handles.DICOM.X,0.9999);
+% Load images:
+handles.Images = ImageStack.LoadFiles( [pathname filename] );
 
 % Update user path:
-handles.DICOM.pth = pathname;
 handles.userPath = pathname;
 %}
 
@@ -250,25 +231,9 @@ guidata(hObject,handles)
 
 % Now that the guidata is updated, configure the view:
 configureView2(handles);
-set(handles.axes1,'CLim',handles.DICOM.CLim)
+set(handles.axes1,'CLim',handles.Images.CLim)
 
    
-% Now we have the handle, and a DICOM image is loaded.
-    % ------------------------------
-    function clim = imlimits(X,frac)
-        % See the code of STRETCHLIM.  It returns the limits in percentage of the
-        % data range, so we need to multiply this by the number of bins to return
-        % the actual intensity value
-        if isa(X,'uint8')
-            nbins = 256;
-        else
-            nbins = 65536;
-        end
-        lowhigh = stretchlim(X(:),[0 frac]); % discard 0.01% of outliers;
-        clim = lowhigh*nbins;
-        clim = clim(:)';
-    end
-
 end %prep_gui_2D()
 
 

@@ -3,8 +3,7 @@ function infoWBMF(hf,~)
 handles = guidata(hf);
 
 % Only makes sense to update if we have DICOM files loaded:
-IMG = handles.( activeImageField(handles) );
-if isempty(IMG) || isempty(IMG.X)
+if isempty(handles.Images) || isempty(handles.Images.X)
     return
 end
 
@@ -32,17 +31,11 @@ loc = max([pmin; loc],[],1);
 v = squeeze(I(loc(2), loc(1), :));
 
 
-% DICOM-only data:
-switch activeImageField(handles)
-    case 'DICOM'
-        ps  = handles.DICOM.info(sj,pj).PixelSpacing;
-        iop = handles.DICOM.info(sj,pj).ImageOrientationPatient;
-        ipp = handles.DICOM.info(sj,pj).ImagePositionPatient;
-    case 'IMAGE'
-        ps = NaN(2,1);   % Uness we manually put a calibration 
-        ipp = NaN(1,3);
-        iop = NaN(1,6);
-end
+% Scaling data:
+ps  = handles.Images.info(sj,pj).PixelSpacing;
+iop = handles.Images.info(sj,pj).ImageOrientationPatient;
+ipp = handles.Images.info(sj,pj).ImagePositionPatient;
+
 
 % Update the annotation:
 annotationManager(handles.ImageAnnotation,...

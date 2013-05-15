@@ -9,8 +9,9 @@ xyz = surfacePoint( get(ax,'CurrentPoint'), get(hObject,'UserData') );
 
 % Get the relevant image:
 handles = guidata(hObject);
-j = find(round(handles.DICOM.z*1e3) == round(xyz(3)*1e3));
-img = handles.DICOM.X(:,:,j);
+s = find(round(handles.Images.z*1e3) == round(xyz(3)*1e3));
+p = current('phase',handles.axes1);
+img = handles.Images.image(s,p);
 
 
 img = medfilt2(img);

@@ -201,11 +201,11 @@ ianno = get(hAnno,'String');
 pt = pt-1;          % Dicom uses zero-based
 pxyz = roi.pix2mm3D(pt,PixelSpacing,ImagePositionPatient,ImageOrientationPatient);
 pt = round(pt);     % Whole mm values
-value = round(rand(1,3)*255);
+
 % These strings handle grayscale / rgb image data where appropriate:
-imDimStr  = @()[sprintf('Image Size: %d',imsize(1)) sprintf(' \\times %d',imsize(2:end)) ];
-crsLocPix = @()[sprintf('X: %3d px  Y: %3d px  Value:',pt(1),pt(2)) sprintf(' %3.0f',value) '' ];
-crsLocMM  = @()sprintf('X: %04.2f mm  Y: %04.2f mm  Z: %04.2f mm',pxyz(1),pxyz(2),pxyz(3));
+imDimStr  = [sprintf('Image Size: %d',imsize(1)) sprintf(' \\times %d',imsize(2:end)) ];
+crsLocPix = [sprintf('X: %3d px  Y: %3d px  Value:',pt(1),pt(2)) sprintf(' %3.0f',value) '' ];
+crsLocMM  = sprintf('X: %04.2f mm  Y: %04.2f mm  Z: %04.2f mm',pxyz(1),pxyz(2),pxyz(3));
 
 % Initialisation case:
 if isempty(ianno)
@@ -216,11 +216,9 @@ if isempty(ianno)
         };
 else
 % Update case:
-
-    % 
     have = @(var)~isempty(var);
     
-    if have(imsize),  ianno(1) = {imDimStr()}; end
+    if have(imsize),  ianno(1) = {imDimStr}; end
     
     if have(pt),
         
@@ -228,7 +226,7 @@ else
         %   If not, don't show text
         if ( (pt(1) >= 0) && (pt(1) <= imsize(1)) ) &&...
                 ( (pt(2) >= 0) && (pt(2) <= imsize(2)) )
-            ianno(2:3) = {crsLocPix(); crsLocMM()}; 
+            ianno(2:3) = {crsLocPix; crsLocMM}; 
         else
             ianno(2:3) = {'',''};
         end

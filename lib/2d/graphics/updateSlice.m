@@ -62,11 +62,8 @@ else
     if nargin > 1
         
         % Get image specs:
-        IMG = handles.(activeImageField(handles));
-        dims = size(IMG);
-        ns = dims(end-1);
-        np = dims(end);
-        I = currentImage(handles,sj,pj);
+        [ns,np] = handles.Images.stacksize();
+        I = handles.Images.image(sj,pj);
         
         % Set image
         set(hi,'CData',I)                       % Update current image data

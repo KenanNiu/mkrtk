@@ -10,15 +10,16 @@ ha = handles.axes1;
 s = current('slice',ha);
 p = current('phase',ha);
 
-imgfield = activeImageField(handles);
-IMG = handles.( imgfield );
-dims = size(IMG.X);
+IMG = handles.Images;       % Shorthand
+[ns,np] = IMG.stacksize();  % Size of the stack
 
+haveImage = ~( isempty(handles.Images) || isempty(handles.Images.X) );
+
+% Check bounds on displayed slice & phase:
 if ( isempty(s) || isempty(p) ) ||...   % Image not yet displayed
-        isempty(IMG)  ||...             % or image data not loaded
-        isempty(IMG.X) ||...            % or image empty
-        s > dims(end-1) || ...          % Or slice out of bounds
-        p > dims(end)                   % Or phase out of bounds
+        ~haveImage || ...               % Or no image is loaded
+        s > ns || ...                   % Or slice out of bounds
+        p > np                          % Or phase out of bounds
     s = 1;
     p = 1;
 end
@@ -29,22 +30,20 @@ CALTOOL_STATE = 'off';
 
 % Display/hide graphics as required:
 axTag = get(handles.axes1,'Tag');       % STORE
-haveImage = ~( isempty(IMG) || isempty(IMG.X) );
 if ~haveImage
     vis = 'off';
     I = [];
     clim = [0 1];
 else
-    vis = 'on';
+    vis  = 'on';
     clim = IMG.CLim;
+    I    = IMG.image(s,p);
     
     % Account for the different configurations when reading image:
-    switch imgfield
+    switch IMG.Type
         case 'DICOM'
-            I = IMG.X(:,:,s,p);
             
         case 'IMAGE'
-            I = IMG.X(:,:,:,s,p);
             CALTOOL_STATE = 'on'; % Enable / show calibration tool
     end
     
@@ -56,6 +55,5 @@ set(ha,'CLim',clim);
 updateSlice(handles,s,p)
 set(ha,'Visible',vis)
 set([handles.StackAnnotation, handles.ImageAnnotation],'Visible',vis)
-set(handles.CalibrateImageTool,'Visible',CALTOOL_STATE,'Enable',CALTOOL_STATE)
-
+%set(handles.CalibrateImageTool,'Visible',CALTOOL_STATE,'Enable',CALTOOL_STATE)
 
