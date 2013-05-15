@@ -9,12 +9,18 @@ hcmenu = uicontextmenu; % Menu top level
 
 switch lower(opt)
 
-    case 'trace'
+    case 'roi'
         
-        set(hcmenu,'Tag','Trace context menu')
+        % Tag & title the menu:
+        set(hcmenu,'Tag','ROI context menu')
+        uimenu(hcmenu,'Label','ROI menu','Enable','off');
         
         % Colour Sub-menu
-        colourMenu(hcmenu);
+        citem = colourMenu(hcmenu);
+        set(citem,'Separator','on')
+        
+        % Info Sub-menu
+        roiInfoMenu(hcmenu);
         
         % Delete item
         uimenu(hcmenu,...
@@ -23,7 +29,11 @@ switch lower(opt)
             'Callback', @deleteROI);
         
     case {'cloud','staticcloud'}
+        
+        % Tag & title the menu:
         set(hcmenu,'Tag','Cloud context menu')
+        uimenu(hcmenu,'Label','Cloud menu','Separator','on','Enable','off');
+        
         % Create a context menu for point clouds:
         % Provides:
         %   - Colour options
@@ -103,6 +113,51 @@ opts = {'2','4','6','8','10','12','18','24','48'};
 for j = 1:numel(opts)
     uimenu(item1,'Label',opts{j},'Callback',@setMarkerSize);
 end
+
+
+% ------------------------------------------------------------------------
+function roiInfoMenu(hparent)
+% Stub out the blank menu
+item1 = uimenu(hparent,'Label','Info','Tag','ROI-Info','Callback',@updateRoiInfo);
+uimenu(item1,'Enable','off','Label','ROI Info')
+uimenu(item1,'Enable','off','Label','Area','Tag','Area','Separator','on')
+uimenu(item1,'Enable','off','Tag','Area-pixels')
+uimenu(item1,'Enable','off','Tag','Area-mm')
+uimenu(item1,'Enable','off','Label','Perimeter','Tag','Perimeter')
+uimenu(item1,'Enable','off','Tag','Perimeter-pixels')
+uimenu(item1,'Enable','off','Tag','Perimeter-mm')
+uimenu(item1,'Label','Copy','Separator','on','Callback',@copyRoiInfo)
+
+
+% ------------------------------------------------------------------------
+function copyRoiInfo(hmenu,~)
+%COPYROIINFO Copy ROI info to the clipboard
+ht = gco;                   % ROI graphics handle
+handles = guidata(hmenu);   % 
+tf = strcmpi(get(ht,'Tag'),{handles.traces.Tag});
+r = handles.traces(tf);     % ROI object
+msgbox('not yet enabled')
+
+
+% ------------------------------------------------------------------------
+function updateRoiInfo(hmenu,~)
+%UPDATEROIINFO Update the menu used to display the ROI info
+% Get the data:
+ht = gco;                   % ROI graphics handle
+handles = guidata(hmenu);   % 
+tf = strcmpi(get(ht,'Tag'),{handles.traces.Tag});
+r = handles.traces(tf);     % ROI object
+
+% Populate the menu items:
+hApix = findobj(hmenu,'Type','uimenu','Tag','Area-pixels');
+hAmm  = findobj(hmenu,'Type','uimenu','Tag','Area-mm');
+hPpix = findobj(hmenu,'Type','uimenu','Tag','Perimeter-pixels');
+hPmm  = findobj(hmenu,'Type','uimenu','Tag','Perimeter-mm');
+
+set(hApix,'Label',sprintf('%9.1f (pix²)',r.Area.pixels))
+set(hAmm,'Label', sprintf('%9.2f (mm²)', r.Area.mm))
+set(hPpix,'Label',sprintf('%9.1f (pix)', r.Length.pixels))
+set(hPmm,'Label', sprintf('%9.2f (mm)',  r.Length.mm))
 
 
 % ------------------------------------------------------------------------

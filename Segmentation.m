@@ -99,7 +99,7 @@ hf = handles.figure1;
 ha = handles.axes1;
 
 % Configure context menus:
-handles.htmenu   = createContextMenu('trace');          % Trace context menu
+handles.htmenu   = createContextMenu('roi');          % ROI context menu
 
 % Axis
 box(ha,'off');
@@ -226,7 +226,7 @@ delete(handles.figure1)
 
 
 % ------------------------------------------------------------------------
-function MI_LoadDicom_Callback(~, eventdata, handles)
+function MI_LoadDicom_Callback(hObject, eventdata, handles)
 % hObject    handle to MI_LoadDicom (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -240,6 +240,7 @@ if ~isempty(handles.traces)
     else
         % Erase traces
         handles.traces = roi([]);
+        guidata(hObject,handles)
     end
 end    
 
