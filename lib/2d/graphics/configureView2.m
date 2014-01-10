@@ -49,11 +49,12 @@ else
     
 end
 
+hold(ha,'off');          % Ensure image is replaced:
 imshow(I,'Parent',ha);   % Show image
 set(ha,'Tag',axTag)      % Imshow cleared the tag
 set(ha,'CLim',clim);
 updateSlice(handles,s,p)
 set(ha,'Visible',vis)
 set([handles.StackAnnotation, handles.ImageAnnotation],'Visible',vis)
-%set(handles.CalibrateImageTool,'Visible',CALTOOL_STATE,'Enable',CALTOOL_STATE)
+set(handles.CalibrateImageTool,'Visible',CALTOOL_STATE,'Enable',CALTOOL_STATE)
 

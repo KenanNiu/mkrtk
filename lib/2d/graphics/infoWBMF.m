@@ -21,14 +21,17 @@ I = get(findobj(handles.axes1,'-depth',1,'Type','image'),'CData');
 
 imsize = size(I);
 
-% Get image value under cursor, limiting to be in-bounds:
+% Get image value under cursor, limiting cursor to be in-bounds:
+% Note that this value could be a single number (for grayscale image), or
+% an rgb vector
 loc = round(cpsn);
 pmin = [ 1 1 ];
 pmax = [ size(I,2) size(I,1) ];
 
 loc = min([pmax; loc],[],1);
 loc = max([pmin; loc],[],1);
-v = squeeze(I(loc(2), loc(1), :));
+v = I(loc(2), loc(1), :);
+v = v(:);
 
 
 % Scaling data:

@@ -12,4 +12,5 @@ bone*.txt
 #lib/shared/externals/FEX\ Functions/*
 
 # Temporary directories:
+lib/shared/externals/FEX\ Functions/geom*
 

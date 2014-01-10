@@ -194,9 +194,9 @@ methods (Static)
         
         % Not sure why, but sometimes the save will crack the sads when
         % trying to over-write an existing file.  This usually only happens
-        % when trying to write to file on a network.  If this is the case,
-        % give  it a couple of shots with a pause in between to see if it
-        % will work eventually:
+        % when trying to write to a file on a network.  If this is the
+        % case, give  it a couple of shots with a pause in between to see
+        % if it will work eventually:
         n = 5;      % Try up to 5 times
         for j = 1:n
             try

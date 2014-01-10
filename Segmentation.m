@@ -643,6 +643,18 @@ set(hObject,'State','off')
 
 
 % ------------------------------------------------------------------------
+function CalibrateImageTool_ClickedCallback(hObject, eventdata, handles)
+
+% Retrieve data:
+ax = handles.axes1;
+
+% This creates an interactive gui and returns immediately.  That gui sends
+% changes back to handles as required.
+manual_image_calibration(ax,handles.Images.s)
+
+
+
+% ------------------------------------------------------------------------
 function clim = imlimits(X,frac)
 % See the code of STRETCHLIM.  It returns the limits in percentage of the
 % data range, so we need to multiply this by the number of bins to return

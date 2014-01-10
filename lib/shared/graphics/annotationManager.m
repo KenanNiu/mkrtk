@@ -199,7 +199,12 @@ ianno = get(hAnno,'String');
 
 % Cursor value 
 pt = pt-1;          % Dicom uses zero-based
-pxyz = roi.pix2mm3D(pt,PixelSpacing,ImagePositionPatient,ImageOrientationPatient);
+% Speed up with this check:
+if any( isnan([PixelSpacing(:); ImagePositionPatient(:); ImageOrientationPatient(:)]) )
+    pxyz = [NaN; NaN; NaN];
+else
+    pxyz = roi.pix2mm3D(pt,PixelSpacing,ImagePositionPatient,ImageOrientationPatient);
+end
 pt = round(pt);     % Whole mm values
 
 % These strings handle grayscale / rgb image data where appropriate:
@@ -216,11 +221,10 @@ if isempty(ianno)
         };
 else
 % Update case:
-    have = @(var)~isempty(var);
     
-    if have(imsize),  ianno(1) = {imDimStr}; end
+    if ~isempty(imsize),  ianno(1) = {imDimStr}; end
     
-    if have(pt),
+    if ~isempty(pt),
         
         % If cursor location is within the image bounds, show text
         %   If not, don't show text
