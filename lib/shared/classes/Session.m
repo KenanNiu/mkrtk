@@ -104,8 +104,8 @@ methods (Static)
             warndlg('It appears that this was not a valid session file for this program')
             return
         end
-        [p,~,~] = fileparts(sfilename);
-        handles.sessionPath = p;
+        %[p,~,~] = fileparts(sfilename);
+        handles.sessionPath = sfilename;
         ok = true;
                 
     end %load()

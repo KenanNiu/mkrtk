@@ -939,7 +939,15 @@ if isdir(pth)
     
 elseif isdicomdir(pth)
     usecache = get(handles.Checkbox_CacheDICOMDIR,'Value');
-    [S,ud] = list_from_dicomdir(pth,usecache);
+    % Be a little bit robust to busted cache files:
+    try 
+        [S,ud] = list_from_dicomdir(pth,usecache);
+    catch ME %#ok<CTCH>
+        cachefile = [fileparts(pth) filesep 'dicomdir.mat'];
+        delete( cachefile );
+        [S,ud] = list_from_dicomdir(pth,usecache);
+    end
+        
     cbk = @study_preview;
     uicontrol(hObject)      % switch focus to the study list
     lbt = 1;
@@ -1176,7 +1184,8 @@ cachefile = [pth filesep 'dicomdir.mat'];
 
 if usecache && exist(cachefile,'file')==2
     % Load from cache - provides D
-    load(cachefile)
+    cachedata = load(cachefile);
+    D = cachedata.D;
 else
     % Lock figure
     hlock = FigLocker.Lock(handles.figure1);

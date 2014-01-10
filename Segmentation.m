@@ -238,11 +238,15 @@ if ~isempty(handles.traces)
         % User wants to quit
         return
     else
-        % Erase traces
+        % Erase traces:
         handles.traces = roi([]);
-        guidata(hObject,handles)
     end
 end    
+
+% We don't want to over-write an old session with this new data, so clear
+% the path:
+handles.sessionPath = '';   
+guidata(hObject,handles)
 
 % Now launch the gui & add update listener:
 pthseed = handles.Images.pth;
