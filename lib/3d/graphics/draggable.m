@@ -44,14 +44,15 @@ end
 fig = ancestor(hobj,'figure');
 ax  = ancestor(hobj,'axes');
 
-% Store all the figure data that we over-ride:
-initial.wbmf = get(fig,'WindowButtonMotionFcn');
-initial.wbuf = get(fig,'WindowButtonUpFcn');
-initial.wbdf = get(fig,'WindowButtonDownFcn');
-initial.kpf  = get(fig,'KeyPressFcn');
-initial.krf  = get(fig,'KeyReleaseFcn');
-
-setappdata(fig,'draggable_initial_data',initial);
+if ~isappdata(fig,'draggable_initial_data')
+    % Store all the figure data that we over-ride:
+    initial.WindowButtonMotionFcn = get(fig,'WindowButtonMotionFcn');
+    initial.WindowButtonUpFcn   = get(fig,'WindowButtonUpFcn');
+    initial.WindowButtonDownFcn = get(fig,'WindowButtonDownFcn');
+    initial.KeyPressFcn         = get(fig,'KeyPressFcn');
+    initial.KeyReleaseFcn       = get(fig,'KeyReleaseFcn');
+    setappdata(fig,'draggable_initial_data',initial);
+end
 
 %set(hobj,'ButtonDownFcn',@button_down)
 
@@ -205,14 +206,14 @@ function button_up(fig,~,obj)
 % Reset cursor:
 setpointer(fig,'arrow');
 
-% Re-set properties that we have temporarily overridden:
+% Re-set properties that we only need during button down:
 initial = getappdata(fig,'draggable_initial_data');
-set(fig,'WindowButtonMotionFcn',initial.wbmf)
-set(fig,'WindowButtonUpFcn',initial.wbuf)
+set(fig,'WindowButtonMotionFcn',initial.WindowButtonMotionFcn)
+set(fig,'WindowButtonUpFcn',initial.WindowButtonUpFcn)
 
 % Remove the rotation/translation mode control callback (only KeyPressFcn -
 % KeyReleaseFcn is reset/removed at the end of its execution)
-set(fig,'KeyPressFcn',initial.kpf)
+set(fig,'KeyPressFcn',initial.KeyPressFcn)
 
 % Now run The KeyReleaseFcn if it is still set:
 krf = get(fig,'KeyReleaseFcn');
@@ -463,7 +464,7 @@ if strcmpi(k.Key,'shift') && isempty(k.Character)
     
     % Automatically destroy / reset this key_up callback:
     initial = getappdata(fig,'draggable_initial_data');
-    set(fig,'KeyReleaseFcn',initial.krf)
+    set(fig,'KeyReleaseFcn',initial.KeyReleaseFcn)
 
 end
 

@@ -54,6 +54,7 @@ function varargout = Registration(varargin)
 %               [retval,ncores] = system('sysctl -n hw.ncpu')
 %           - # cores Windows:
 %               ?[retval,ncores] = system('echo %NUMBER_OF_PROCESSORS%')
+%   - "Hide" contextual menu item
 %   
 % CHANGES / IMPROVEMENTS:
 %
@@ -405,12 +406,18 @@ function MI_ExportMovie_Callback(hObject, eventdata, handles)
 
 % Make a movie of the motion through all phases
 
+% Get file name:
+[fname,pname] = uiputfile({'*.avi','AVI File (*.avi)'},...
+    'Save video file as',[handles.userPath 'movie.avi']);
+
+if isequal(pname,0)
+    return
+end
+
 % Get axis limits for the whole cycle:
 [xlims,ylims,zlims] = get_bounding_axis_limits(handles);
     
 % Configure video file:
-[fname,pname] = uiputfile({'*.avi','AVI File (*.avi)'},...
-    'Save video file as',[handles.userPath 'movie.avi']);     
 vidObj = VideoWriter([pname fname],'Motion JPEG AVI');
 vidObj.FrameRate = 5;
 vidObj.Quality = 100;

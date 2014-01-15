@@ -48,8 +48,8 @@ p = createPlane(p0,nml);
 hp = drawPlane3d(p);
 set(hp,'FaceColor',[0.5 0.5 0.5])
 
-%draggable(hp,'AllowRotate',true)
-draggable(hp,'AllowRotate',true,'ConstrainTo',curve)
+draggable(hp,'AllowRotate',true)
+%draggable(hp,'AllowRotate',true,'ConstrainTo',curve)
 
 %keyboard
 

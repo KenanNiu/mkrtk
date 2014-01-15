@@ -944,7 +944,7 @@ if (nargin == 0)                       % GET usage
 elseif (nargin == 1) && (nargout == 0)  % SET usage
     handles = varargin{1};
     guidata(handles.figure1,handles)
-    
+        
 else
     error('Incorrect input/output combination')
 end
@@ -962,6 +962,7 @@ end
 
 % Restore initial data
 mainh = mainguidata();
+if isempty(mainh), return, end
 mainh.HelicalAxis  = handles.inputs.hax;
 mainh.LineOfAction = handles.inputs.loa;
 mainh.MomentArm    = handles.inputs.marm;
@@ -1000,13 +1001,13 @@ switch (action)
     
     case {'add','update'}
         
-        hl = FigLocker.Lock(mainh.figure1);
-        hl.setprogress(inf)
+        %hl = FigLocker.Lock(mainh.figure1);
+        %hl.setprogress(inf)
         
         switch lower(list)
             case 'hax'  % Update HelicalAxis field
                 
-                hl.settext('Updating helical axes')
+                %hl.settext('Updating helical axes')
                 hax = struct(...
                     'Tag',      tag,...
                     'Item1',    varargin{1},...
@@ -1027,7 +1028,7 @@ switch (action)
                 
             case 'loa'  % Update LineOfAction field
                 
-                hl.settext('Updating lines of action')
+                %hl.settext('Updating lines of action')
                 loa = struct(...
                     'Tag',      tag,...
                     'Item',     varargin{1},...
@@ -1035,11 +1036,13 @@ switch (action)
                     'Point',    [],...
                     'Vector',   []);
                 loa = calcLinesOfAction(loa,mainh.Models);
-                mainh.LineOfAction = cat(2, mainh.LineOfAction, loa);
+                if ~isempty( loa )
+                    mainh.LineOfAction = cat(2, mainh.LineOfAction, loa);
+                end
                 
             case 'marm' % Update MomentArm field
                                 
-                hl.settext('Updating moment arms')
+                %hl.settext('Updating moment arms')
                 marm = struct(...
                     'Tag',      tag,...
                     'Item1',    varargin{1},...
@@ -1054,7 +1057,7 @@ switch (action)
         end
         
         % Unlock
-        hl.unlock;
+        %hl.unlock;
         
     case 'remove'
         

@@ -105,7 +105,11 @@ if ~isempty(handles.HelicalAxis)
                 handles.HelicalAxis(j).Axis(p,:),...
                 handles.HelicalAxis(j).Point(p,:),...
                 'Color','m',qprops{:})
-            
+%             txyz = handles.HelicalAxis(j).Point(p,:) + 20*handles.HelicalAxis(j).Axis(p,:);
+%             t = text(txyz(1),txyz(2),txyz(3),...
+%                 num2str(handles.HelicalAxis(j).Angle(p)*180/pi),...
+%                 'Color','black','fontweight','bold','FontSize',12,...
+%                 'BackgroundColor','white');
             % Plot alternate Helical Axis
 %             plotHelical(ha,...
 %                 handles.HelicalAxis(j).Axis(p-1,:),...
@@ -176,6 +180,11 @@ explorationStates(handles.figure1,'revert') % Revert the tools to user's current
 
 axis(ha,'tight')    % Tighten
 zoom(ha,'reset')    % Set these axis limits as default
+
+% ----------- Trigger event listeners:
+% We use UserData as a general means of triggering event listeners
+% A simple update with a timestamp does the trick:
+set(ha,'UserData',now)
 
 
 % ------------------------------------------------------------------------

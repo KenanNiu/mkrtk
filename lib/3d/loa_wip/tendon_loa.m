@@ -443,6 +443,7 @@ switch joint
             'MGR_019',[50 20];
             'MGR_028',[60 15];
             'MGR_033',[95 55];
+            'Projects_MRI_Barbara_MRI_Trace_Traces', [-15,-80];
             };
     case 'knee'
         map = {...

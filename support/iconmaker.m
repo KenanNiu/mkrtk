@@ -24,7 +24,7 @@ else
 end
 
 
-imax = intmax(class(X));
+
 
 if 1%all(alpha == imax) % no transparency set
     % Add iconEditor to path:
@@ -34,6 +34,12 @@ if 1%all(alpha == imax) % no transparency set
     I = iconEditor('iconfile',imagefile);
     
 else
+    if isequal( 'logical', class(X) )
+        imax = true;
+    else
+        imax = intmax();
+    end
+    
     imax = double(imax);
     X = double(X);
     alpha = double(alpha);
