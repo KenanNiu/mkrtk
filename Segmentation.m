@@ -310,7 +310,7 @@ function MI_Navigator_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-[ns,np] = handles.Image.stacksize();
+[ns,np] = handles.Images.stacksize();
 
 % Launch the GUI
 hf = Navigator(ns,np,handles.traces);
