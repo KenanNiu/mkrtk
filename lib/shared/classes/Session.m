@@ -295,11 +295,21 @@ for j = 1:numel(updfields)
         end
     end
 end
-% Versioning issues - this is a bit ugly and could be dropped in due course
-handles = check_models_upgrade(handles);    % 20-Nov-2012
-handles = check_cloud_upgrade(handles);     % Sep-2012?
-handles = check_roi_upgrade(handles);       % early-2012?
+% Versioning issues - this is a bit ugly and could possibly be dropped in due course
+handles = check_dicom_upgrade(handles,source);  % 15-May-2013
+handles = check_models_upgrade(handles);        % 20-Nov-2012
+handles = check_cloud_upgrade(handles);         % Sep-2012?
+handles = check_roi_upgrade(handles);           % early-2012?
 end %load_fields()
+
+% ------------------------------------------------------------------------
+function handles = check_dicom_upgrade(handles,source)
+% Previously dicom images were stored in a STRUCT called DICOM.  
+% 15-May-2013 saw a change to using the IMAGESTACK class and associated methods
+if isfield(source,'DICOM') && isa(source.DICOM,'struct')
+    handles.Images = ImageStack(source.DICOM);  % convert struct to class object
+end
+end %check_dicom_upgrade()
 
 % ------------------------------------------------------------------------
 function handles = check_models_upgrade(handles)
