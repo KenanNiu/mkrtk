@@ -85,14 +85,14 @@ if ~isfield(caller_handles,'Models')
         ' since it depends on its handles.'],mfilename)
 end
 
-% Get data:
+% Copy relevant data from main program to handles of StateSmoother:
 handles.Orig.Models = caller_handles.Models;            % Store initial state of Models
 handles.Models      = handles.Orig.Models;              % Then store a copy to work with
 
-handles.Orig.HelicalAxis = caller_handles.HelicalAxis;  % Store inital state
+handles.Orig.HelicalAxis = caller_handles.HelicalAxis;  % Store inital state of Axes
 handles.HelicalAxis      = handles.Orig.HelicalAxis;    % Then store a copy to work with
 
-if isfield(caller_handles,'pose_filter')
+if isfield(caller_handles,'pose_filter') && ~isempty(caller_handles.pose_filter)
     handles.Orig.pose_filter = caller_handles.pose_filter; % Store initial state
     handles.pose_filter      = handles.Orig.pose_filter;   % Then store a copy to work with
 else
