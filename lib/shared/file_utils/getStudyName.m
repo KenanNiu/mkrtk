@@ -5,6 +5,8 @@ function studyname = getStudyName(pth)
 %   a) a path containing a DICOM folder, or 
 %   b) a path to a file used in registration
 %
+% Otherwise a random name will be made up from the path
+%
 % Trailing file separator can either be present or not
 
 c = path2cell(pth);
@@ -34,9 +36,10 @@ elseif any( strcmpi(c,'pilot') )
 else
     
     % All known searches failed,
-    %  return up to 3 levels of parent directories:
-    if numel(c) >= 4
-        idx = numel(c)-3:numel(c)-1;
+    %  return up to 2 levels of parent directories:
+    n = 2;
+    if numel(c) >= (n+1)
+        idx = numel(c)-n:numel(c)-1;
     else
         idx = 1:numel(c)-1;
     end

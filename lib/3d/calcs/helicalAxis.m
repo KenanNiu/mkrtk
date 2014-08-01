@@ -85,8 +85,10 @@ d = tformB.c(1,:);
 %   2) Convert R to quaternion, convert quaternion to axis/angle
 
 % Method 1):
-%   a) Use inbuilt matlab function
-v = vrrotmat2vec(R);
+%   a) Use inbuilt matlab function, if the user has it installed
+if exist('vrrotmat2vec', 'file') == 2
+    v = vrrotmat2vec(R);
+end
 %theta = v(4);    % Finding the angle of rotation 
 %axs = v(1:3);    % Finding unit vector in direction of axis of rotation 
 % Same as:
@@ -120,15 +122,18 @@ pt_star = (cross(b, (dstar - cross(b,dstar))))/(2*dot(b,b));
 % actually because cross(b,d) = cross(b,dstar), we can just do
 pt = (cross(b, (d - cross(b,d))))/(2*dot(b,b));
 
-% Check:
-if ( max( abs(axs - v(1:3)) ) > 1e12 ) ||...
-   ( max( abs(axs - w) ) > 1e12 )
-    fprintf('Axis solutions differ...\n')
-    keyboard
-end
-if max( abs(pt - pt_star) ) > 1e12
-    fprintf('Point solutions differ...\n')
-    keyboard
+
+% Carry out checks if matlab function has also been used:
+if exist('v','var') % calculated above with vrrotmat2vec
+    if ( max( abs(axs - v(1:3)) ) > 1e12 ) ||...
+       ( max( abs(axs - w) ) > 1e12 )
+        fprintf('Axis solutions differ...\n')
+        keyboard
+    end
+    if max( abs(pt - pt_star) ) > 1e12
+        fprintf('Point solutions differ...\n')
+        keyboard
+    end
 end
 
 

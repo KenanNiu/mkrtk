@@ -18,10 +18,9 @@ if nargin == 0
     handles = guidata(hf);
 end
 
-fprintf(2,'Make sure your motion is smoothed before defining the helical axis!!!\n');
-fprintf(2,'1. Change smoothing parameters\n');
-fprintf(2,'2. Smooth the motion: Dev>Smooth\n');
-fprintf(2,'3. Define / re-define / calculate helical axis\n');
+fprintf(2,'1. You will probably want to make sure your motion is smoothed before running this function.\n')
+fprintf(2,'2. Make sure you have a helical axis defined\n');
+fprintf(2,'3. Define a line of action through the normal GUI (which doesn''t yet run calcs)\n\n');
 fprintf(2,'4. Finally, call this function\n\n');
 
 assert(~isempty(handles.LineOfAction),'You must define a line of action')

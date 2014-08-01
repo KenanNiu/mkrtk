@@ -5,6 +5,9 @@ function tf = isdeveloper
 % privileges.  But consider yourself warned - you're enabling half-broken
 % code.  Enjoy!
 
+tf = true;
+return
+
 
 % Collect the current user name:
 if isunix

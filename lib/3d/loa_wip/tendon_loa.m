@@ -443,6 +443,7 @@ switch joint
             'MGR_019',[50 20];
             'MGR_028',[60 15];
             'MGR_033',[95 55];
+            'Josh_s_stuff_Data_11_July_14',[50 0];
             };
     case 'knee'
         map = {...
