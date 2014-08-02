@@ -676,6 +676,14 @@ handles = addToHandles(handles,h);
 function [theta,slider_val,sfun] = guiFilterStates(handles)
 % Get the filter states from the GUI
 
+%TODO 2-Aug-14  As it turns out, when the anonymous function SFUN gets
+%saved to a .mat file, the size of that mat file blows out by 60+ Mb.  This
+%seems to be due to all the references that the funtion has that must get
+%invisibly wrapped up so that their available for the function at runtime.
+%It may be due exclusively to the defintion of SPAN, but it is not clear.
+%This needs to be addressed in the future.
+
+
 % Get filter span:
 slider_val = get(handles.Slider_Width,'Value');
 
